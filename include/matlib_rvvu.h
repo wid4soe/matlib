@@ -36,15 +36,15 @@ extern "C"
 #undef matsetv
 #define maxcoeff(...) __rvvu__maxcoeff(__VA_ARGS__)
 #define mincoeff(...) __rvvu__mincoeff(__VA_ARGS__)
-#define matnorm matnorm_rvv
+#define matnorm(...) __rvvu__matnorm(__VA_ARGS__)
 #define matneg(...) __rvvu__matneg(__VA_ARGS__)
 #define cwiseabs(...) __rvvu__cwiseabs(__VA_ARGS__)
 #define cwisemin(...) __rvvu__cwisemin(__VA_ARGS__)
 #define cwisemax(...) __rvvu__cwisemax(__VA_ARGS__)
 #define cwisemul(...) __rvvu__cwisemul(__VA_ARGS__)
-#define matmul matmul_rvv
-#define matvec matvec_rvv
-#define matvec_transpose matvec_transpose_rvv
+#define matmul(...) __rvvu__matmul(__VA_ARGS__)
+#define matvec(...) __rvvu__matvec(__VA_ARGS__)
+#define matvec_transpose(...) __rvvu__matvec_transpose(__VA_ARGS__)
 #define matmulf(...) __rvvu__matmulf(__VA_ARGS__)
 #define matsub(...) __rvvu__matsub(__VA_ARGS__)
 #define matadd(...) __rvvu__matadd(__VA_ARGS__)

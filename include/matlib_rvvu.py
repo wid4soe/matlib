@@ -132,6 +132,35 @@ class Unroller:
         Unroller.idx += 1
 
     @classmethod
+    def matnorm(cls, indents, target, tail, a, n, m):
+        n = eval(n)
+        m = eval(m)
+        k = m * n
+        l = 0
+        i = Unroller.idx
+        Unroller.print(f"""\
+                vfloat32_t vec_{i};
+                float *ptr_{i} = {a};
+                size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});
+                vfloat32_t vec_s_{i} = __riscv_vfmv_v_f_f32(0, vlmax_{i});\
+            """)
+        while k > 0:
+            vl = min(k, Unroller.vlmax)
+            Unroller.print(f"""\
+                vec_{i} = __riscv_vle32_v_f32(ptr_{i} + {l}, {vl});
+                vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i}, {vl});\
+            """)
+            k -= vl
+            l += vl
+        Unroller.print(f"""\
+                vfloat32m1_t vec_sum_{i} = __riscv_vfredusum_vs_f32_f32(vec_s_{i}, vec_zero_{i}, vlmax_{i});
+                float sum_{i} = __riscv_vfmv_f_s_f32m1_f32(vec_sum_{i});
+                {target} = sqrt(sum_{i}) {tail};\
+            """)
+        Unroller.idx += 1
+
+    @classmethod
     def matneg(cls, indents, a, b, n, m):
         n = eval(n)
         m = eval(m)
@@ -253,6 +282,110 @@ class Unroller:
             """)
             k -= vl
             l += vl
+        Unroller.idx += 3
+
+    @classmethod
+    def matmul(cls, indents, a, b, c, n, m, o):
+        n = eval(n)
+        m = eval(m)
+        o = eval(o)
+        i = Unroller.idx
+        Unroller.print(f"""\
+                        vfloat32_t vec_s_{i}, vec_sum_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                        float *ptr_{i}; float *ptr_{i+1}; float *ptr_{i+2} = {c};
+                        size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                        vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});\
+                        """)
+        for I in range(n):
+            for J in range(m):
+                k = o
+                Unroller.print(f"""\
+                        ptr_{i} = {a} + {I * o};
+                        ptr_{i+1} = {b} + {J * o};
+                        vec_s_{i} = __riscv_vfmv_v_f_f32(0, vlmax_{i});\
+                        """)
+                while k > 0:
+                    vl = min(k, Unroller.vlmax)
+                    Unroller.print(f"""\
+                        vec_{i} = __riscv_vle32_v_f32(ptr_{i}, {vl});
+                        vec_{i+1} = __riscv_vle32_v_f32(ptr_{i+1}, {vl});
+                        vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
+                        ptr_{i} += {vl};
+                        ptr_{i+1} += {vl};\
+                        """)
+                    k -= vl
+                Unroller.print(f"""\
+                        vec_sum_{i} = __riscv_vfredusum_vs_f32_f32(vec_s_{i}, vec_zero_{i}, vlmax_{i});
+                        ptr_{i+2}[{I * m + J}] = __riscv_vfmv_f_s_f32m1_f32(vec_sum_{i});\
+                        """)
+        Unroller.idx += 3
+
+    @classmethod
+    def matvec(cls, indents, a, b, c, n, m):
+        n = eval(n)
+        m = eval(m)
+        i = Unroller.idx
+        Unroller.print(f"""\
+                        vfloat32_t vec_s_{i}, vec_sum_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                        float *ptr_{i}; float *ptr_{i+1}; float *ptr_{i+2} = {c};
+                        size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                        vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});\
+                        """)
+        for I in range(n):
+            k = m
+            Unroller.print(f"""\
+                    ptr_{i} = {a} + {I * m};
+                    ptr_{i+1} = {b};
+                    vec_s_{i} = __riscv_vfmv_v_f_f32(0, vlmax_{i});\
+                    """)
+            while k > 0:
+                vl = min(k, Unroller.vlmax)
+                Unroller.print(f"""\
+                    vec_{i} = __riscv_vle32_v_f32(ptr_{i}, {vl});
+                    vec_{i+1} = __riscv_vle32_v_f32(ptr_{i+1}, {vl});
+                    vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
+                    ptr_{i} += {vl};
+                    ptr_{i+1} += {vl};\
+                    """)
+                k -= vl
+            Unroller.print(f"""\
+                    vec_sum_{i} = __riscv_vfredusum_vs_f32_f32(vec_s_{i}, vec_zero_{i}, vlmax_{i});
+                    ptr_{i+2}[{I}] = __riscv_vfmv_f_s_f32m1_f32(vec_sum_{i});\
+                    """)
+        Unroller.idx += 3
+
+    @classmethod
+    def matvec_transpose(cls, indents, a, b, c, n, m):
+        n = eval(n)
+        m = eval(m)
+        i = Unroller.idx
+        Unroller.print(f"""\
+                        vfloat32_t vec_s_{i}, vec_sum_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                        float *ptr_{i}; float *ptr_{i+1}; float *ptr_{i+2} = {c};
+                        size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                        vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});\
+                        """)
+        for I in range(m):
+            k = n
+            Unroller.print(f"""\
+                    ptr_{i} = {a} + {I};
+                    ptr_{i+1} = {b};
+                    vec_s_{i} = __riscv_vfmv_v_f_f32(0, vlmax_{i});\
+                    """)
+            while k > 0:
+                vl = min(k, Unroller.vlmax)
+                Unroller.print(f"""\
+                    vec_{i} = __riscv_vlse32_v_f32(ptr_{i}, {m} * sizeof(float), {vl});
+                    vec_{i+1} = __riscv_vle32_v_f32(ptr_{i+1}, {vl});
+                    vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
+                    ptr_{i} += {vl};
+                    ptr_{i+1} += {vl};\
+                    """)
+                k -= vl
+            Unroller.print(f"""\
+                    vec_sum_{i} = __riscv_vfredusum_vs_f32_f32(vec_s_{i}, vec_zero_{i}, vlmax_{i});
+                    ptr_{i+2}[{I}] = __riscv_vfmv_f_s_f32m1_f32(vec_sum_{i});\
+                    """)
         Unroller.idx += 3
 
     @classmethod
@@ -395,6 +528,7 @@ for line in lines:
             print("function: ", method)
             print("arguments: ", arguments)
         try:
+            print(f"// {line}", end="")
             getattr(Unroller, method)(indents, *arguments)
         except:
             print(f"{indents}{method}_rvv({match_void.group(3)});")
@@ -405,6 +539,7 @@ for line in lines:
         arguments = match_return.group(4).strip().split(', ')
         tail = match_return.group(5)
         try:
+            print(f"// {line}", end="")
             getattr(Unroller, method)(indents, target, tail, *arguments)
         except:
             print(f"{indents}{target} = {method}_rvvu({match_return.group(4)});")
