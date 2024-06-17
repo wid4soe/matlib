@@ -51,7 +51,7 @@ class Unroller:
             k -= vl
             l += vl
         Unroller.idx += 3
-    
+
     @classmethod
     def matsub(cls, indents, a, b, c, n, m):
         n = eval(n)
@@ -201,14 +201,14 @@ class Unroller:
                 """)
             while k > 0:
                 vl = min(k, Unroller.vlmax)
+                k -= vl
+                l += vl
                 Unroller.print(f"""\
                     vec_{i} = __riscv_vlse32_v_f32(ptr_{i}, sizeof(float) * {m}, {vl});
                     __riscv_vse32(ptr_{i+1}, vec_{i}, {vl});
                     ptr_{i} = {a} + {l * m + j};
                     ptr_{i+1} += {vl};
                 """)
-                k -= vl
-                l += vl
         Unroller.idx += 2
 
     @classmethod
@@ -258,7 +258,7 @@ class Unroller:
             k -= vl
             l += vl
         Unroller.idx += 3
-    
+
     @classmethod
     def cwisemax(cls, indents, a, b, c, n, m):
         n = eval(n)
@@ -291,9 +291,10 @@ class Unroller:
         o = eval(o)
         i = Unroller.idx
         Unroller.print(f"""\
-                        vfloat32_t vec_s_{i}, vec_sum_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                        vfloat32_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
                         float *ptr_{i}; float *ptr_{i+1}; float *ptr_{i+2} = {c};
                         size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                        vfloat32m1_t vec_sum_{i};
                         vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});\
                         """)
         for I in range(n):
@@ -309,7 +310,10 @@ class Unroller:
                     Unroller.print(f"""\
                         vec_{i} = __riscv_vle32_v_f32(ptr_{i}, {vl});
                         vec_{i+1} = __riscv_vle32_v_f32(ptr_{i+1}, {vl});
-                        vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
+                        vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});\
+                        """)
+                    if k - vl > 0:
+                        Unroller.print(f"""\
                         ptr_{i} += {vl};
                         ptr_{i+1} += {vl};\
                         """)
@@ -326,9 +330,10 @@ class Unroller:
         m = eval(m)
         i = Unroller.idx
         Unroller.print(f"""\
-                        vfloat32_t vec_s_{i}, vec_sum_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                        vfloat32_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
                         float *ptr_{i}; float *ptr_{i+1}; float *ptr_{i+2} = {c};
                         size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                        vfloat32m1_t vec_sum_{i};
                         vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});\
                         """)
         for I in range(n):
@@ -343,7 +348,10 @@ class Unroller:
                 Unroller.print(f"""\
                     vec_{i} = __riscv_vle32_v_f32(ptr_{i}, {vl});
                     vec_{i+1} = __riscv_vle32_v_f32(ptr_{i+1}, {vl});
-                    vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
+                    vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});\
+                    """)
+                if k > vl:
+                    Unroller.print(f"""\
                     ptr_{i} += {vl};
                     ptr_{i+1} += {vl};\
                     """)
@@ -360,9 +368,10 @@ class Unroller:
         m = eval(m)
         i = Unroller.idx
         Unroller.print(f"""\
-                        vfloat32_t vec_s_{i}, vec_sum_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                        vfloat32_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
                         float *ptr_{i}; float *ptr_{i+1}; float *ptr_{i+2} = {c};
                         size_t vlmax_{i} = __riscv_vsetvlmax_e32();
+                        vfloat32m1_t vec_sum_{i};
                         vfloat32m1_t vec_zero_{i} = __riscv_vfmv_v_f_f32m1(0, vlmax_{i});\
                         """)
         for I in range(m):
@@ -378,7 +387,10 @@ class Unroller:
                     vec_{i} = __riscv_vlse32_v_f32(ptr_{i}, {m} * sizeof(float), {vl});
                     vec_{i+1} = __riscv_vle32_v_f32(ptr_{i+1}, {vl});
                     vec_s_{i} = __riscv_vfmacc_vv_f32(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
-                    ptr_{i} += {vl};
+                    """)
+                if k > vl:
+                    Unroller.print(f"""\
+                    ptr_{i} += {m} * {vl};
                     ptr_{i+1} += {vl};\
                     """)
                 k -= vl

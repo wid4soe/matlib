@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define scalar_t            float
 #define MSTATUS_VS          0x00000600
 #define MSTATUS_FS          0x00006000
 #define MSTATUS_XS          0x00018000
@@ -31,7 +32,7 @@ inline void gen_rand_1d(float *a, int n);
 inline void gen_string(char *s, int n);
 inline void print_string(const char *a, const char *name);
 inline void print_array_1d(float *a, int n, const char *type, const char *name);
-inline bool float_eq(float golden, float actual, float relErr);
+inline bool is_equal(float golden, float actual, float relErr);
 inline bool compare_1d(float *golden, float *actual, int n);
 inline bool compare_string(const char *golden, const char *actual, int n);
 inline float *alloc_array_1d(int n);
@@ -125,13 +126,13 @@ inline void print_array_1d(float *a, int n, const char *type, const char *name) 
     puts("");
 }
 
-inline bool float_eq(float golden, float actual, float relErr) {
+inline bool is_equal(float golden, float actual, float relErr) {
     return (fabs(actual - golden) < relErr) || (fabs((actual - golden) / actual) < relErr);
 }
 
 inline bool compare_1d(float *golden, float *actual, int n) {
     for (int i = 0; i < n; ++i)
-        if (!float_eq(golden[i], actual[i], 1e-6))
+        if (!is_equal(golden[i], actual[i], 1e-6))
             return false;
     return true;
 }
@@ -185,7 +186,7 @@ inline void print_array_2d(float *a, int n, int m, const char *type, const char 
 
 inline bool compare_2d(float *golden, float *actual, int n, int m) {
     for (int i = 0; i < m * n; ++i)
-        if (!float_eq(golden[i], actual[i], 1e-6))
+        if (!is_equal(golden[i], actual[i], 1e-6))
             return false;
     return true;
 }
@@ -262,7 +263,7 @@ inline void print_array_2d(float **a, int n, int m, const char *type, const char
 inline bool compare_2d(float **golden, float **actual, int n, int m) {
     for (int i = 0; i < n; ++i)
         for (int j = 0; j < m; ++j)
-            if (!float_eq(golden[i][j], actual[i][j], 1e-6))
+            if (!is_equal(golden[i][j], actual[i][j], 1e-6))
                 return false;
     return true;
 }

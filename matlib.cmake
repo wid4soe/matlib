@@ -20,6 +20,9 @@ option(MEASURE_CYCLES "Measure Cycles" OFF)
 
 set(USE_LMUL "1" CACHE STRING "LMUL to use in vector instructions")
 add_compile_definitions(USE_LMUL=${USE_LMUL})
+set(USE_TYPE "float32" CACHE STRING "Matlib data type")
+message("Setting default operand type as ${USE_TYPE}")
+add_compile_definitions(USE_TYPE=${USE_TYPE})
 
 if(USE_PK)
     add_compile_definitions(USE_PK=1)
