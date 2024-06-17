@@ -1,0 +1,111 @@
+//
+// Created by widyadewi on 4/27/24.
+//
+
+#ifndef TINYMPC_MATLIB_LMUL_H
+#define TINYMPC_MATLIB_LMUL_H
+
+
+#ifndef USE_LMUL
+#define USE_LMUL 1
+#endif
+
+#if USE_LMUL == 1
+#define __riscv_vfabs_v_f64 __riscv_vfabs_v_f64m1
+#define __riscv_vfadd_vv_f64 __riscv_vfadd_vv_f64m1
+#define __riscv_vfmacc_vv_f64 __riscv_vfmacc_vv_f64m1
+#define __riscv_vfmacc_vf_f64 __riscv_vfmacc_vf_f64m1
+#define __riscv_vfmax_vv_f64 __riscv_vfmax_vv_f64m1
+#define __riscv_vfmin_vv_f64 __riscv_vfmin_vv_f64m1
+#define __riscv_vfmul_vf_f64 __riscv_vfmul_vf_f64m1
+#define __riscv_vfmul_vv_f64 __riscv_vfmul_vv_f64m1
+#define __riscv_vfmv_f_s_f64_f64 __riscv_vfmv_f_s_f64m1_f64
+#define __riscv_vfmv_s_f_f64 __riscv_vfmv_s_f_f64m1
+#define __riscv_vfmv_v_f_f64 __riscv_vfmv_v_f_f64m1
+#define __riscv_vfneg_v_f64 __riscv_vfneg_v_f64m1
+#define __riscv_vfredmax_vs_f64_f64 __riscv_vfredmax_vs_f64m1_f64m1
+#define __riscv_vfredmin_vs_f64_f64 __riscv_vfredmin_vs_f64m1_f64m1
+#define __riscv_vfredusum_vs_f64_f64 __riscv_vfredusum_vs_f64m1_f64m1
+#define __riscv_vfsub_vv_f64 __riscv_vfsub_vv_f64m1
+#define __riscv_vle64_v_f64 __riscv_vle64_v_f64m1
+#define __riscv_vlse64_v_f64 __riscv_vlse64_v_f64m1
+#define __riscv_vse64_v_f64 __riscv_vse64_v_f64m1
+#define __riscv_vsse64_v_f64 __riscv_vsse64_v_f64m1
+#define __riscv_vsetvl_e64 __riscv_vsetvl_e64m1
+#define __riscv_vsetvlmax_e64 __riscv_vsetvlmax_e64m1
+#define vfloat64_t vfloat64m1_t
+#elif USE_LMUL == 2
+#define __riscv_vfabs_v_f64 __riscv_vfabs_v_f64m2
+#define __riscv_vfadd_vv_f64 __riscv_vfadd_vv_f64m2
+#define __riscv_vfmacc_vv_f64 __riscv_vfmacc_vv_f64m2
+#define __riscv_vfmacc_vf_f64 __riscv_vfmacc_vf_f64m2
+#define __riscv_vfmax_vv_f64 __riscv_vfmax_vv_f64m2
+#define __riscv_vfmin_vv_f64 __riscv_vfmin_vv_f64m2
+#define __riscv_vfmul_vf_f64 __riscv_vfmul_vf_f64m2
+#define __riscv_vfmul_vv_f64 __riscv_vfmul_vv_f64m2
+#define __riscv_vfmv_f_s_f64_f64 __riscv_vfmv_f_s_f64m2_f64
+#define __riscv_vfmv_s_f_f64 __riscv_vfmv_s_f_f64m2
+#define __riscv_vfmv_v_f_f64 __riscv_vfmv_v_f_f64m2
+#define __riscv_vfneg_v_f64 __riscv_vfneg_v_f64m2
+#define __riscv_vfredmax_vs_f64_f64 __riscv_vfredmax_vs_f64m2_f64m1
+#define __riscv_vfredmin_vs_f64_f64 __riscv_vfredmin_vs_f64m2_f64m1
+#define __riscv_vfredusum_vs_f64_f64 __riscv_vfredusum_vs_f64m2_f64m1
+#define __riscv_vfsub_vv_f64 __riscv_vfsub_vv_f64m2
+#define __riscv_vle64_v_f64 __riscv_vle64_v_f64m2
+#define __riscv_vlse64_v_f64 __riscv_vlse64_v_f64m2
+#define __riscv_vse64_v_f64 __riscv_vse64_v_f64m2
+#define __riscv_vsse64_v_f64 __riscv_vsse64_v_f64m2
+#define __riscv_vsetvl_e64 __riscv_vsetvl_e64m2
+#define __riscv_vsetvlmax_e64 __riscv_vsetvlmax_e64m2
+#define vfloat64_t vfloat64m2_t
+#elif USE_LMUL == 4
+#define __riscv_vfabs_v_f64 __riscv_vfabs_v_f64m4
+#define __riscv_vfadd_vv_f64 __riscv_vfadd_vv_f64m4
+#define __riscv_vfmacc_vv_f64 __riscv_vfmacc_vv_f64m4
+#define __riscv_vfmacc_vf_f64 __riscv_vfmacc_vf_f64m4
+#define __riscv_vfmax_vv_f64 __riscv_vfmax_vv_f64m4
+#define __riscv_vfmin_vv_f64 __riscv_vfmin_vv_f64m4
+#define __riscv_vfmul_vf_f64 __riscv_vfmul_vf_f64m4
+#define __riscv_vfmul_vv_f64 __riscv_vfmul_vv_f64m4
+#define __riscv_vfmv_f_s_f64_f64 __riscv_vfmv_f_s_f64m4_f64
+#define __riscv_vfmv_s_f_f64 __riscv_vfmv_s_f_f64m4
+#define __riscv_vfmv_v_f_f64 __riscv_vfmv_v_f_f64m4
+#define __riscv_vfneg_v_f64 __riscv_vfneg_v_f64m4
+#define __riscv_vfredmax_vs_f64_f64 __riscv_vfredmax_vs_f64m4_f64m1
+#define __riscv_vfredmin_vs_f64_f64 __riscv_vfredmin_vs_f64m4_f64m1
+#define __riscv_vfredusum_vs_f64_f64 __riscv_vfredusum_vs_f64m4_f64m1
+#define __riscv_vfsub_vv_f64 __riscv_vfsub_vv_f64m4
+#define __riscv_vle64_v_f64 __riscv_vle64_v_f64m4
+#define __riscv_vlse64_v_f64 __riscv_vlse64_v_f64m4
+#define __riscv_vse64_v_f64 __riscv_vse64_v_f64m4
+#define __riscv_vsse64_v_f64 __riscv_vsse64_v_f64m4
+#define __riscv_vsetvl_e64 __riscv_vsetvl_e64m4
+#define __riscv_vsetvlmax_e64 __riscv_vsetvlmax_e64m4
+#define vfloat64_t vfloat64m4_t
+#elif USE_LMUL == 8
+#define __riscv_vfabs_v_f64 __riscv_vfabs_v_f64m8
+#define __riscv_vfadd_vv_f64 __riscv_vfadd_vv_f64m8
+#define __riscv_vfmacc_vv_f64 __riscv_vfmacc_vv_f64m8
+#define __riscv_vfmacc_vf_f64 __riscv_vfmacc_vf_f64m8
+#define __riscv_vfmax_vv_f64 __riscv_vfmax_vv_f64m8
+#define __riscv_vfmin_vv_f64 __riscv_vfmin_vv_f64m8
+#define __riscv_vfmul_vf_f64 __riscv_vfmul_vf_f64m8
+#define __riscv_vfmul_vv_f64 __riscv_vfmul_vv_f64m8
+#define __riscv_vfmv_f_s_f64_f64 __riscv_vfmv_f_s_f64m8_f64
+#define __riscv_vfmv_s_f_f64 __riscv_vfmv_s_f_f64m8
+#define __riscv_vfmv_v_f_f64 __riscv_vfmv_v_f_f64m8
+#define __riscv_vfneg_v_f64 __riscv_vfneg_v_f64m8
+#define __riscv_vfredmax_vs_f64_f64 __riscv_vfredmax_vs_f64m8_f64m1
+#define __riscv_vfredmin_vs_f64_f64 __riscv_vfredmin_vs_f64m8_f64m1
+#define __riscv_vfredusum_vs_f64_f64 __riscv_vfredusum_vs_f64m8_f64m1
+#define __riscv_vfsub_vv_f64 __riscv_vfsub_vv_f64m8
+#define __riscv_vle64_v_f64 __riscv_vle64_v_f64m8
+#define __riscv_vlse64_v_f64 __riscv_vlse64_v_f64m8
+#define __riscv_vse64_v_f64 __riscv_vse64_v_f64m8
+#define __riscv_vsse64_v_f64 __riscv_vsse64_v_f64m8
+#define __riscv_vsetvl_e64 __riscv_vsetvl_e64m8
+#define __riscv_vsetvlmax_e64 __riscv_vsetvlmax_e64m8
+#define vfloat64_t vfloat64m8_t
+#endif
+
+#endif //TINYMPC_MATLIB_LMUL_H
