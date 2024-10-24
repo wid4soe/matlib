@@ -14,6 +14,7 @@
 #define __riscv_vfabs_v_f32 __riscv_vfabs_v_f32m1
 #define __riscv_vfadd_vv_f32 __riscv_vfadd_vv_f32m1
 #define __riscv_vfmacc_vv_f32 __riscv_vfmacc_vv_f32m1
+#define __riscv_vfmacc_vf_f32 __riscv_vfmacc_vf_f32m1
 #define __riscv_vfmax_vv_f32 __riscv_vfmax_vv_f32m1
 #define __riscv_vfmin_vv_f32 __riscv_vfmin_vv_f32m1
 #define __riscv_vfmul_vf_f32 __riscv_vfmul_vf_f32m1
@@ -29,6 +30,7 @@
 #define __riscv_vle32_v_f32 __riscv_vle32_v_f32m1
 #define __riscv_vlse32_v_f32 __riscv_vlse32_v_f32m1
 #define __riscv_vse32_v_f32 __riscv_vse32_v_f32m1
+#define __riscv_vsse32_v_f32 __riscv_vsse32_v_f32m1
 #define __riscv_vsetvl_e32 __riscv_vsetvl_e32m1
 #define __riscv_vsetvlmax_e32 __riscv_vsetvlmax_e32m1
 #define vfloat32_t vfloat32m1_t
@@ -36,6 +38,7 @@
 #define __riscv_vfabs_v_f32 __riscv_vfabs_v_f32m2
 #define __riscv_vfadd_vv_f32 __riscv_vfadd_vv_f32m2
 #define __riscv_vfmacc_vv_f32 __riscv_vfmacc_vv_f32m2
+#define __riscv_vfmacc_vf_f32 __riscv_vfmacc_vf_f32m2
 #define __riscv_vfmax_vv_f32 __riscv_vfmax_vv_f32m2
 #define __riscv_vfmin_vv_f32 __riscv_vfmin_vv_f32m2
 #define __riscv_vfmul_vf_f32 __riscv_vfmul_vf_f32m2
@@ -51,6 +54,7 @@
 #define __riscv_vle32_v_f32 __riscv_vle32_v_f32m2
 #define __riscv_vlse32_v_f32 __riscv_vlse32_v_f32m2
 #define __riscv_vse32_v_f32 __riscv_vse32_v_f32m2
+#define __riscv_vsse32_v_f32 __riscv_vsse32_v_f32m2
 #define __riscv_vsetvl_e32 __riscv_vsetvl_e32m2
 #define __riscv_vsetvlmax_e32 __riscv_vsetvlmax_e32m2
 #define vfloat32_t vfloat32m2_t
@@ -58,6 +62,7 @@
 #define __riscv_vfabs_v_f32 __riscv_vfabs_v_f32m4
 #define __riscv_vfadd_vv_f32 __riscv_vfadd_vv_f32m4
 #define __riscv_vfmacc_vv_f32 __riscv_vfmacc_vv_f32m4
+#define __riscv_vfmacc_vf_f32 __riscv_vfmacc_vf_f32m4
 #define __riscv_vfmax_vv_f32 __riscv_vfmax_vv_f32m4
 #define __riscv_vfmin_vv_f32 __riscv_vfmin_vv_f32m4
 #define __riscv_vfmul_vf_f32 __riscv_vfmul_vf_f32m4
@@ -73,6 +78,7 @@
 #define __riscv_vle32_v_f32 __riscv_vle32_v_f32m4
 #define __riscv_vlse32_v_f32 __riscv_vlse32_v_f32m4
 #define __riscv_vse32_v_f32 __riscv_vse32_v_f32m4
+#define __riscv_vsse32_v_f32 __riscv_vsse32_v_f32m4
 #define __riscv_vsetvl_e32 __riscv_vsetvl_e32m4
 #define __riscv_vsetvlmax_e32 __riscv_vsetvlmax_e32m4
 #define vfloat32_t vfloat32m4_t
@@ -80,6 +86,7 @@
 #define __riscv_vfabs_v_f32 __riscv_vfabs_v_f32m8
 #define __riscv_vfadd_vv_f32 __riscv_vfadd_vv_f32m8
 #define __riscv_vfmacc_vv_f32 __riscv_vfmacc_vv_f32m8
+#define __riscv_vfmacc_vf_f32 __riscv_vfmacc_vf_f32m8
 #define __riscv_vfmax_vv_f32 __riscv_vfmax_vv_f32m8
 #define __riscv_vfmin_vv_f32 __riscv_vfmin_vv_f32m8
 #define __riscv_vfmul_vf_f32 __riscv_vfmul_vf_f32m8
@@ -95,6 +102,7 @@
 #define __riscv_vle32_v_f32 __riscv_vle32_v_f32m8
 #define __riscv_vlse32_v_f32 __riscv_vlse32_v_f32m8
 #define __riscv_vse32_v_f32 __riscv_vse32_v_f32m8
+#define __riscv_vsse32_v_f32 __riscv_vsse32_v_f32m8
 #define __riscv_vsetvl_e32 __riscv_vsetvl_e32m8
 #define __riscv_vsetvlmax_e32 __riscv_vsetvlmax_e32m8
 #define vfloat32_t vfloat32m8_t

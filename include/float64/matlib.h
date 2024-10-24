@@ -26,6 +26,8 @@
 #include "matlib_rvvu.h"
 #endif
 
+typedef double tinytype;
+
 extern "C" {
 
 inline void gen_rand_1d(double *a, int n);
