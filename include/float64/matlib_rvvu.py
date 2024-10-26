@@ -4,6 +4,7 @@
 
 import re
 import sys
+import traceback
 from textwrap import *
 
 DEBUG = False
@@ -330,36 +331,31 @@ class Unroller:
         m = eval(m)
         i = Unroller.idx
         Unroller.print(f"""\
-                        vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
-                        double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
-                        size_t vlmax_{i} = __riscv_vsetvlmax_e64();
-                        vfloat64m1_t vec_sum_{i};
-                        vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
-                        """)
-        for I in range(n):
-            k = m
+                    vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                    double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
+                    size_t vlmax_{i} = __riscv_vsetvlmax_e64();
+                    vfloat64m1_t vec_sum_{i};
+                    vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
+                    """)
+        k = n
+        I = 0
+        while k > 0:
+            vl = min(k, Unroller.vlmax)
             Unroller.print(f"""\
                     ptr_{i} = {a} + {I * m};
                     ptr_{i+1} = {b};
                     vec_s_{i} = __riscv_vfmv_v_f_f64(0, vlmax_{i});\
                     """)
-            while k > 0:
-                vl = min(k, Unroller.vlmax)
+            for J in range(m):
                 Unroller.print(f"""\
-                    vec_{i} = __riscv_vle64_v_f64(ptr_{i}, {vl});
-                    vec_{i+1} = __riscv_vle64_v_f64(ptr_{i+1}, {vl});
-                    vec_s_{i} = __riscv_vfmacc_vv_f64(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});\
+                    vec_{i} = __riscv_vlse64_v_f64(ptr_{i} + {J}, {m} * sizeof(double), {vl});
+                    vec_s_{i} = __riscv_vfmacc_vf_f64(vec_s_{i}, *(ptr_{i+1} + {J}), vec_{i}, {vl});\
                     """)
-                if k > vl:
-                    Unroller.print(f"""\
-                    ptr_{i} += {vl};
-                    ptr_{i+1} += {vl};\
-                    """)
-                k -= vl
             Unroller.print(f"""\
-                    vec_sum_{i} = __riscv_vfredusum_vs_f64_f64(vec_s_{i}, vec_zero_{i}, vlmax_{i});
-                    ptr_{i+2}[{I}] = __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
+                    __riscv_vse64_v_f64(ptr_{i+2} + {I}, vec_s_{i}, {vl});\
                     """)
+            k -= vl
+            I += vl
         Unroller.idx += 3
 
     @classmethod
@@ -368,36 +364,31 @@ class Unroller:
         m = eval(m)
         i = Unroller.idx
         Unroller.print(f"""\
-                        vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
-                        double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
-                        size_t vlmax_{i} = __riscv_vsetvlmax_e64();
-                        vfloat64m1_t vec_sum_{i};
-                        vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
-                        """)
-        for I in range(m):
-            k = n
+                    vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                    double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
+                    size_t vlmax_{i} = __riscv_vsetvlmax_e64();
+                    vfloat64m1_t vec_sum_{i};
+                    vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
+                    """)
+        k = m
+        I = 0
+        while k > 0:
+            vl = min(k, Unroller.vlmax)
             Unroller.print(f"""\
                     ptr_{i} = {a} + {I};
                     ptr_{i+1} = {b};
                     vec_s_{i} = __riscv_vfmv_v_f_f64(0, vlmax_{i});\
                     """)
-            while k > 0:
-                vl = min(k, Unroller.vlmax)
+            for J in range(n):
                 Unroller.print(f"""\
-                    vec_{i} = __riscv_vlse64_v_f64(ptr_{i}, {m} * sizeof(double), {vl});
-                    vec_{i+1} = __riscv_vle64_v_f64(ptr_{i+1}, {vl});
-                    vec_s_{i} = __riscv_vfmacc_vv_f64(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});
+                    vec_{i} =  __riscv_vle64_v_f64(ptr_{i} + {J * m}, {vl});
+                    vec_s_{i} = __riscv_vfmacc_vf_f64(vec_s_{i}, *(ptr_{i+1} + {J}), vec_{i}, {vl});\
                     """)
-                if k > vl:
-                    Unroller.print(f"""\
-                    ptr_{i} += {m} * {vl};
-                    ptr_{i+1} += {vl};\
-                    """)
-                k -= vl
             Unroller.print(f"""\
-                    vec_sum_{i} = __riscv_vfredusum_vs_f64_f64(vec_s_{i}, vec_zero_{i}, vlmax_{i});
-                    ptr_{i+2}[{I}] = __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
+                    __riscv_vse64_v_f64(ptr_{i+2} + {I}, vec_s_{i}, {vl});\
                     """)
+            k -= vl
+            I += vl
         Unroller.idx += 3
 
     @classmethod
@@ -542,7 +533,7 @@ for line in lines:
         try:
             print(f"// {line}", end="")
             getattr(Unroller, method)(indents, *arguments)
-        except:
+        except Exception as e: 
             print(f"{indents}{method}_rvv({match_void.group(3)});")
     elif match_return:
         indents = match_return.group(1)
@@ -553,7 +544,7 @@ for line in lines:
         try:
             print(f"// {line}", end="")
             getattr(Unroller, method)(indents, target, tail, *arguments)
-        except:
+        except Exception as e:
             print(f"{indents}{target} = {method}_rvvu({match_return.group(4)});")
     else:
         print(line, end="")

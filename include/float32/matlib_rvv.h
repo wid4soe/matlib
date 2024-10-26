@@ -192,14 +192,13 @@ inline void matvec_rvv(float *a, float *b, float *c, int n, int m) {
     for (int I = 0; k > 0; k -= vl, I += vl) {
         vl = __riscv_vsetvl_e32(k);
         float *ptr_a = a + I * m; // row major
-        float *ptr_b = b + I; // column major
+        float *ptr_b = b; // column major
         vfloat32_t vec_c = __riscv_vfmv_v_f_f32(0, vlmax);
         for (int J = 0; J < m; J++) {
-            float *ptr_c = c + J; // row major
             vfloat32_t vec_a = __riscv_vlse32_v_f32(ptr_a + J, m * sizeof(float), vl);
             vec_c = __riscv_vfmacc_vf_f32(vec_c, *(ptr_b + J), vec_a, vl);
-            __riscv_vse32_v_f32(c + I, vec_c, vl);
         }
+        __riscv_vse32_v_f32(c + I, vec_c, vl);
     }
 }
 
@@ -215,16 +214,16 @@ inline void matvec_transpose_rvv(float *a, float *b, float *c, int n, int m) {
     vfloat32m1_t vec_zero = __riscv_vfmv_v_f_f32m1(0, vlmax);
     int k = m;
     size_t vl = 0;
-    for (int J = 0; k > 0; k -= vl, J += vl) {
+    for (int I = 0; k > 0; k -= vl, I += vl) {
         vl = __riscv_vsetvl_e32(k);
-        float *ptr_a = a + J; // col major
+        float *ptr_a = a + I; // col major
         float *ptr_b = b; // row major
         vfloat32_t vec_c = __riscv_vfmv_v_f_f32(0, vlmax);
-        for (int I = 0; I < n; I++) {
-            vfloat32_t vec_a = __riscv_vlse32_v_f32(ptr_a + I * m, m * sizeof(float), vl);
-            vec_c = __riscv_vfmacc_vf_f32(vec_c, *(ptr_b + I), vec_a, vl);
-            __riscv_vse32_v_f32(c + J, vec_c, vl);
+        for (int J = 0; J < n; J++) {
+            vfloat32_t vec_a = __riscv_vle32_v_f32(ptr_a + J * m, vl);
+            vec_c = __riscv_vfmacc_vf_f32(vec_c, *(ptr_b + J), vec_a, vl);
         }
+        __riscv_vse32_v_f32(c + I, vec_c, vl);
     }
 }
 
