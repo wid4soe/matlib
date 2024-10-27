@@ -27,7 +27,7 @@ function(add_matlib_target target_name is_executable)
         add_library(${target_name} STATIC)
     endif()
     get_target_property(directory ${target_name} SOURCE_DIR)
-    if (USE_RVVU)
+    if (USE_RVVU OR USE_RVVF)
         foreach(original_file ${arg_UNPARSED_ARGUMENTS})
             get_filename_component(basename ${original_file} NAME_WE)
             get_filename_component(extension ${original_file} EXT)
@@ -35,10 +35,12 @@ function(add_matlib_target target_name is_executable)
             set(preprocessed_file "{directory}/${basename}.ii")
             set(unrolled_file "${CMAKE_CURRENT_BINARY_DIR}/${basename}_rvvu${extension}")
             set(preprocessed_file "${CMAKE_CURRENT_BINARY_DIR}/${basename}.ii")
+            set(unroller_command $<IF:$<BOOL:${USE_RVVF}>,matlib_rvvf.py,matlib_rvvu.py>)
             add_custom_command(
                 OUTPUT "${unrolled_file}"
                 COMMAND "${CMAKE_CXX_COMPILER}" $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -P -o "${preprocessed_file}" -E "${directory}/${original_file}"
-                COMMAND "python3" ${MATLIB_INCLUDE_PATH}/matlib_rvvu.py ${preprocessed_file} ${USE_LMUL} > ${unrolled_file}
+                COMMAND "python3" ${MATLIB_INCLUDE_PATH}/${unroller_command} ${preprocessed_file} ${USE_LMUL} > ${unrolled_file}
+                DEPENDS "${original_file}" "${MATLIB_INCLUDE_PATH}/matlib_rvvf.py"
                 DEPENDS "${original_file}" "${MATLIB_INCLUDE_PATH}/matlib_rvvu.py"
                 DEPENDS "${original_file}" "${MATLIB_INCLUDE_PATH}/matlib_rvvu.h"
                 VERBATIM COMMAND_EXPAND_LISTS
@@ -46,13 +48,13 @@ function(add_matlib_target target_name is_executable)
             list(APPEND unrolled_files ${unrolled_file})
         endforeach()
         target_sources(${target_name} PRIVATE ${unrolled_files})
-    else(USE_RVVU)
+    else(USE_RVVU OR USE_RVVF)
         target_sources(${target_name} PRIVATE ${arg_UNPARSED_ARGUMENTS})
-    endif(USE_RVVU)
+    endif(USE_RVVU OR USE_RVVF)
 
 endfunction()
 
-if(USE_RVV OR USE_RVVU OR USE_CPU)
+if(USE_RVV OR USE_RVVU OR USE_RVVF OR USE_CPU)
 
     add_matlib_library(matlib src/matlib.cpp)
     target_include_directories(matlib PUBLIC ${MATLIB_INCLUDE_PATH} include)
@@ -65,5 +67,5 @@ if(USE_RVV OR USE_RVVU OR USE_CPU)
     target_link_libraries(test_matperf_rvv LINK_PUBLIC matlib)
     target_include_directories(test_matperf_rvv PUBLIC matlib)
 
-endif(USE_RVV OR USE_RVVU OR USE_CPU)
+endif(USE_RVV OR USE_RVVU OR USE_RVVF OR USE_CPU)
 
