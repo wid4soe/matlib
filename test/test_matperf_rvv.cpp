@@ -18,6 +18,11 @@ inline void test_matmul() {
     matmul(A, B, actual, N, M, O);
     total = read_cycles() - start;
     printf("%lu\n", total);
+    printf("matmult:        ");
+    start = read_cycles();
+    matmul(A, B, actual, N, M, O, 8);
+    total = read_cycles() - start;
+    printf("%lu\n", total);
 }
 
 inline void test_matvec() {

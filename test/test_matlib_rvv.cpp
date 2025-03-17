@@ -32,6 +32,13 @@ int main() {
     total = read_cycles() - start;
     printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
 
+    matset(actual, 0.0, N, M);
+    printf("matmult:        ");
+    start = read_cycles();
+    matmul(A, B, actual, N, M, O, 8);
+    total = read_cycles() - start;
+    printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
+
     // array gen
     scalar_t *G = alloc_array_2d(N, M);
     scalar_t *H = alloc_array_2d(M, N);
