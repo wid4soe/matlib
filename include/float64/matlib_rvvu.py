@@ -10,7 +10,7 @@ from textwrap import *
 indents = ''
 
 class Unroller:
-
+    
     lmul = 1
     sew = 64
     vlen = 512
@@ -283,24 +283,16 @@ class Unroller:
         Unroller.idx += 3
 
     @classmethod
-    def matmul(cls, indents, a, b, c, n, m, o):
-        n = eval(n)
-        m = eval(m)
-        o = eval(o)
-        i = Unroller.idx
+    def matmul_tile(cls, indents, i, n, m, o, N, M, O, reset=False):
         Unroller.print(indents, f"""\
-                        vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
-                        double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
-                        size_t vlmax_{i} = __riscv_vsetvlmax_e64();
-                        vfloat64m1_t vec_sum_{i};
-                        vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
+                        // n {n} m {m} o {o} N {N} M {M} O {O} \
                         """)
-        for I in range(n):
-            for J in range(m):
-                k = o
+        for I in range(N):
+            for J in range(M):
+                k = O
                 Unroller.print(indents, f"""\
-                        ptr_{i} = {a} + {I * o};
-                        ptr_{i+1} = {b} + {J * o};
+                        ptr_{i} = A_{i} + {I * o};
+                        ptr_{i+1} = B_{i} + {J * o};
                         vec_s_{i} = __riscv_vfmv_v_f_f64(0, vlmax_{i});\
                         """)
                 while k > 0:
@@ -318,9 +310,128 @@ class Unroller:
                     k -= vl
                 Unroller.print(indents, f"""\
                         vec_sum_{i} = __riscv_vfredusum_vs_f64_f64(vec_s_{i}, vec_zero_{i}, vlmax_{i});
-                        ptr_{i+2}[{I * m + J}] = __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
+                        C_{i}[{I * m + J}] { '=' if reset else '+=' } __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
                         """)
-        Unroller.idx += 3
+
+    @classmethod
+    def matmul(cls, indents, a, b, c, n, m, o, tile_size="-1"):
+        n = eval(n)
+        m = eval(m)
+        o = eval(o)
+        t = eval(tile_size)
+        i = Unroller.idx
+        nt = o % t
+        mt = m % t
+        ot = o % t
+        if t != -1:
+            def matmul_helper(reset):
+                Unroller.print(indents, f"""\
+                                if (a_full_{i}) {{
+                                    if (b_full_{i}) {{
+                                        if (c_full_{i}) {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, t, t, t, reset)
+                Unroller.print(indents, f"""\
+                                        }} else {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, t, t, ot, reset)
+                Unroller.print(indents, f"""\
+                                        }}
+                                    }} else {{
+                                        if (c_full_{i}) {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, t, mt, t, reset)
+                Unroller.print(indents, f"""\
+                                        }} else {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, t, mt, ot, reset)
+                Unroller.print(indents, f"""\
+                                        }}
+                                    }}
+                                }} else {{
+                                    if (b_full_{i}) {{
+                                        if (c_full_{i}) {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, nt, t, t, reset)
+                Unroller.print(indents, f"""\
+                                        }} else {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, nt, t, ot, reset)
+                Unroller.print(indents, f"""\
+                                        }}
+                                    }} else {{
+                                        if (c_full_{i}) {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, nt, mt, t, reset)
+                Unroller.print(indents, f"""\
+                                        }} else {{ """)
+                Unroller.matmul_tile(indents, i, n, m, o, nt, mt, ot, reset)
+                Unroller.print(indents, f"""\
+                                        }}
+                                    }}
+                                }}""")
+                
+            Unroller.print(indents, f"""\
+                vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
+                size_t vlmax_{i} = __riscv_vsetvlmax_e64();
+                vfloat64m1_t vec_sum_{i};
+                vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
+                """)
+            Unroller.print(indents, f"""\
+                int nt_{i} = {n} % {t};
+                int mt_{i} = {m} % {t};
+                int ot_{i} = {o} % {t};                
+                for (int i = 0; i < {n}; i += {t}) {{
+                    for (int j = 0; j < {m}; j += {t}) {{
+                        for (int k = 0; k < {o}; k += {t}) {{
+                            double *A_{i} = {a} + i * {o} + k;
+                            double *B_{i} = {b} + j * {o} + k;
+                            double *C_{i} = {c} + i * {m} + j;
+                            bool a_full_{i} = (i + {t}) < {n};
+                            bool b_full_{i} = (j + {t}) < {m};
+                            bool c_full_{i} = (k + {t}) < {o};
+                            int N_{i} = a_full_{i} ? {t} : nt_{i};
+                            int M_{i} = b_full_{i} ? {t} : mt_{i};
+                            int O_{i} = c_full_{i} ? {t} : ot_{i};
+                            if (k == 0) {{ """)
+            matmul_helper(True)
+            Unroller.print(indents, f"""\
+                            }} else {{ """)
+            matmul_helper(False)
+            Unroller.print(indents, f"""\
+                            }}
+                        }}
+                    }}
+                }} """)
+            Unroller.idx += 3
+        else:
+            Unroller.print(indents, f"""\
+                            vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
+                            double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
+                            size_t vlmax_{i} = __riscv_vsetvlmax_e64();
+                            vfloat64m1_t vec_sum_{i};
+                            vfloat64m1_t vec_zero_{i} = __riscv_vfmv_v_f_f64m1(0, vlmax_{i});\
+                            """)
+            for I in range(n):
+                for J in range(m):
+                    k = o
+                    Unroller.print(indents, f"""\
+                            ptr_{i} = {a} + {I * o};
+                            ptr_{i+1} = {b} + {J * o};
+                            vec_s_{i} = __riscv_vfmv_v_f_f64(0, vlmax_{i});\
+                            """)
+                    while k > 0:
+                        vl = min(k, Unroller.vlmax)
+                        Unroller.print(indents, f"""\
+                            vec_{i} = __riscv_vle64_v_f64(ptr_{i}, {vl});
+                            vec_{i+1} = __riscv_vle64_v_f64(ptr_{i+1}, {vl});
+                            vec_s_{i} = __riscv_vfmacc_vv_f64(vec_s_{i}, vec_{i}, vec_{i+1}, {vl});\
+                            """)
+                        if k - vl > 0:
+                            Unroller.print(indents, f"""\
+                            ptr_{i} += {vl};
+                            ptr_{i+1} += {vl};\
+                            """)
+                        k -= vl
+                    Unroller.print(indents, f"""\
+                            vec_sum_{i} = __riscv_vfredusum_vs_f64_f64(vec_s_{i}, vec_zero_{i}, vlmax_{i});
+                            ptr_{i+2}[{I * m + J}] = __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
+                            """)
+            Unroller.idx += 3
 
     @classmethod
     def matvec(cls, indents, a, b, c, n, m):
@@ -525,7 +636,7 @@ if __name__ == "__main__":
         if match_void:
             indents = match_void.group(1)
             method = match_void.group(2)
-            arguments = match_void.group(3).strip().split(', ')
+            arguments = re.split(r', *', match_void.group(3).strip())
             if DEBUG:
                 print("indents: ", len(indents))
                 print("function: ", method)
@@ -539,7 +650,7 @@ if __name__ == "__main__":
             indents = match_return.group(1)
             target = match_return.group(2)
             method = match_return.group(3)
-            arguments = match_return.group(4).strip().split(', ')
+            arguments = re.split(r', *', match_return.group(4).strip())
             tail = match_return.group(5)
             try:
                 print(f"{indents}// line {line_no}: {dedent(line)}", end="")
