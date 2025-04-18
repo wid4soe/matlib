@@ -161,20 +161,25 @@ inline void matmul_rvv(double *a, double *b, double *c, int n, int m, int o, int
         size_t vlmax = __riscv_vsetvlmax_e64();
         vfloat64m1_t vec_zero = __riscv_vfmv_v_f_f64m1(0, vlmax);
         for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < m; ++j) {
-                double *ptr_a = a + i * o; // row major
-                double *ptr_b = b + j * o; // column major
-                int k = o;
-                vfloat64_t vec_s = __riscv_vfmv_v_f_f64(0, vlmax);
-                for (size_t vl; k > 0; k -= vl, ptr_a += vl, ptr_b += vl) {
-                    vl = __riscv_vsetvl_e64(k);
-                    vfloat64_t vec_a = __riscv_vle64_v_f64(ptr_a, vl);
-                    vfloat64_t vec_b = __riscv_vle64_v_f64(ptr_b, vl);
-                    vec_s = __riscv_vfmacc_vv_f64(vec_s, vec_a, vec_b, vl);
+            double *ptr_a = a + i * o; // row major
+            int k1 = o;
+            for (size_t vl; k1 > 0; k1 -= vl, ptr_a += vl) {
+                vl = __riscv_vsetvl_e64(k1);
+                vfloat64_t vec_a = __riscv_vle64_v_f64(ptr_a, vl);
+
+                for (int j = 0; j < m; ++j) {
+                    double *ptr_b = b + j * o; // column major
+                    int k2 = o;
+                    vfloat64_t vec_s = __riscv_vfmv_v_f_f64(0, vlmax);
+                    for (size_t vl; k2 > 0; k2 -= vl, ptr_b += vl) {
+                        vl = __riscv_vsetvl_e64(k2);
+                        vfloat64_t vec_b = __riscv_vle64_v_f64(ptr_b, vl);
+                        vec_s = __riscv_vfmacc_vv_f64(vec_s, vec_a, vec_b, vl);
+                    }
+                    vfloat64m1_t vec_sum = __riscv_vfredusum_vs_f64_f64(vec_s, vec_zero, vlmax);
+                    float sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
+                    c[i * m + j] = sum;
                 }
-                vfloat64m1_t vec_sum = __riscv_vfredusum_vs_f64_f64(vec_s, vec_zero, vlmax);
-                double sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
-                c[i * m + j] = sum;
             }
         }
     } else {
@@ -201,22 +206,25 @@ inline void matmul_rvvt(double *a, double *b, double *c, int i, int j, int k, in
     size_t vlmax = __riscv_vsetvlmax_e64();
     vfloat64m1_t vec_zero = __riscv_vfmv_v_f_f64m1(0, vlmax);
     for (int I = 0; I < N; ++I) {
-        for (int J = 0; J < M; ++J) {
-            double *ptr_a = A + I * o; // row major
-            double *ptr_b = B + J * o; // column major
-            int K = O;
-            vfloat64_t vec_s = __riscv_vfmv_v_f_f64(0, vlmax);
-            for (size_t vl; K > 0; K -= vl, ptr_a += vl, ptr_b += vl) {
-                vl = __riscv_vsetvl_e64(K);
-                // printf("I: %d J: %d K: %d N: %d M: %d O: %d ptr_a: %x ptr_b: %x vl: %d\n", I, J, K, N, M, O, ptr_a, ptr_b, vl);
-                vfloat64_t vec_a = __riscv_vle64_v_f64(ptr_a, vl);
-                vfloat64_t vec_b = __riscv_vle64_v_f64(ptr_b, vl);
-                vec_s = __riscv_vfmacc_vv_f64(vec_s, vec_a, vec_b, vl);
+        double *ptr_a = A + I * O; // row major
+        int K1 = O;
+        for (size_t vl; K1 > 0; K1 -= vl, ptr_a += vl) {
+            vl = __riscv_vsetvl_e64(K1);
+            vfloat64_t vec_a = __riscv_vle64_v_f64(ptr_a, vl);
+
+            for (int J = 0; J < M; ++J) {
+                double *ptr_b = B + J * O; // column major
+                int K2 = O;
+                vfloat64_t vec_s = __riscv_vfmv_v_f_f64(0, vlmax);
+                for (size_t vl; K2 > 0; K2 -= vl, ptr_b += vl) {
+                    vl = __riscv_vsetvl_e64(K2);
+                    vfloat64_t vec_b = __riscv_vle64_v_f64(ptr_b, vl);
+                    vec_s = __riscv_vfmacc_vv_f64(vec_s, vec_a, vec_b, vl);
+                }
+                vfloat64m1_t vec_sum = __riscv_vfredusum_vs_f64_f64(vec_s, vec_zero, vlmax);
+                float sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
+                C[I * m + J] = k == 0 ? sum : C[I * m + J] + sum;
             }
-            vfloat64m1_t vec_sum = __riscv_vfredusum_vs_f64_f64(vec_s, vec_zero, vlmax);
-            double sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
-            C[I * m + J] = k == 0 ? sum : C[I * m + J] + sum;
-            // C[I * m + J] = C[I * m + J] + sum;
         }
     }
 }
