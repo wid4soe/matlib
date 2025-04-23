@@ -51,6 +51,8 @@ void matsetv_rvv(int *a, int *f, int n, int m);
 #define matset matset_rvv
 #define matsetv matsetv_rvv
 
+#define BATCH 4
+
 
 // matrix maximum coefficient
 inline int maxcoeff_rvv(int *ptr_a, int n, int m) {
@@ -192,6 +194,45 @@ inline void matmul_rvv(int *a, int *b, int *c, int n, int m, int o, int tile_siz
 }
 
 inline void matmul_rvvt(int *a, int *b, int *c, int i, int j, int k, int n, int m, int o, int tile_size) {
+    vint32m1_t v1, v2, v3, v4, v5, v6, v7, v8;
+    vint32m1_t *vec_r[8] = { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 };
+    int *A = a + i * o + k;
+    int *B = b + j * o + k;
+    int *C = c + i * m + j;
+    int N = i + tile_size <= n ? tile_size : n % tile_size;
+    int M = j + tile_size <= m ? tile_size : m % tile_size;
+    int O = k + tile_size <= o ? tile_size : o % tile_size;
+    // printf("A: %d B: %d C: %d N: %d M: %d O: %d\n", A, B, C, N, M, O);
+    size_t vlmax = __riscv_vsetvlmax_e32();
+    vint32m1_t vec_zero = __riscv_vmv_v_x_i32m1(0, vlmax);
+    for (int I = 0; I < N; ++I) {
+        for (int J = 0; J < M; J += BATCH) {
+            int P = J + BATCH < M ? BATCH : M - J;
+            int *ptr_a = A + I * o; // row major
+            int *ptr_b = B + J * o; // column major
+            int K = O;
+            for (int L = 0; L < P; L++) {
+                *(vec_r[L]) = __riscv_vmv_v_x_i32(0, vlmax);
+            }
+            for (size_t vl; K > 0; K -= vl, ptr_a += vl, ptr_b += vl) {
+                vl = __riscv_vsetvl_e32(K);
+                // printf("I: %d J: %d K: %d N: %d M: %d O: %d ptr_a: %x ptr_b: %x vl: %d\n", I, J, K, N, M, O, ptr_a, ptr_b, vl);
+                vint32_t vec_a = __riscv_vle32_v_i32(ptr_a, vl);
+                for (int L = 0; L < P; L++) {
+                    vint32_t vec_b = __riscv_vle32_v_i32(ptr_b + L * o, vl);
+                    *(vec_r[L]) = __riscv_vmacc_vv_i32(*(vec_r[L]), vec_a, vec_b, vl);
+                }
+            }
+            for (int L = 0; L < P; L++) {
+                vint32m1_t vec_sum = __riscv_vredsum_vs_i32_i32(*(vec_r[L]), vec_zero, vlmax);
+                int sum = __riscv_vmv_x_s_i32m1_i32(vec_sum);
+                C[I * m + J + L] = k == 0 ? sum : C[I * m + J + L] + sum;
+            }
+        }
+    }
+}
+
+inline void matmul_rvvt_old(int *a, int *b, int *c, int i, int j, int k, int n, int m, int o, int tile_size) {
     int *A = a + i * o + k;
     int *B = b + j * o + k;
     int *C = c + i * m + j;

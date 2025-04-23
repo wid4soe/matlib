@@ -38,6 +38,10 @@ int main() {
     matmul(A, B, actual, N, M, O, 8);
     total = read_cycles() - start;
     printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
+    // print_array_2d(A, N, O, "float32", "A");
+    // print_array_2d(B, M, O, "float32", "B");
+    // print_array_2d(golden, N, M, "float32", "golden");
+    // print_array_2d(actual, N, M, "float32", "actual");
 
     // array gen
     scalar_t *G = alloc_array_2d(N, M);

@@ -14,6 +14,7 @@ class Unroller:
     lmul = 1
     sew = 64
     vlen = 512
+    batch = 4
     vlmax = int(lmul * vlen / sew)
     idx = 1
 
@@ -285,6 +286,45 @@ class Unroller:
     @classmethod
     def matmul_tile(cls, indents, i, n, m, o, N, M, O, reset=False):
         Unroller.print(indents, f"""\
+                        // n {n} m {m} o {o} N {N} M {M} O {O}
+                        """)
+        for I in range(N):
+            for J in range(0, M, Unroller.batch):
+                P = Unroller.batch if J + Unroller.batch < M else M - J;
+                Unroller.print(indents, f"""\
+                        ptr_{i} = A_{i} + {I * o};
+                        ptr_{i+1} = B_{i} + {J * o};\
+                        """)
+                k = O
+                for L in range(P):
+                    Unroller.print(indents, f"""\
+                        vec_r_{i}_{L} = __riscv_vfmv_v_f_f64(0, vlmax_{i});
+                        """)
+                while k > 0:
+                    vl = min(k, Unroller.vlmax)
+                    Unroller.print(indents, f"""\
+                        vec_{i} = __riscv_vle64_v_f64(ptr_{i}, {vl});\
+                        """)
+                    for L in range(P):
+                        Unroller.print(indents, f"""\
+                        vec_{i+1} = __riscv_vle64_v_f64(ptr_{i+1} + {L * o}, {vl});
+                        vec_r_{i}_{L} = __riscv_vfmacc_vv_f64(vec_r_{i}_{L}, vec_{i}, vec_{i+1}, {vl});\
+                        """)
+                    if k - vl > 0:
+                        Unroller.print(indents, f"""\
+                        ptr_{i} += {vl};
+                        ptr_{i+1} += {vl};\
+                        """)
+                    k -= vl
+                for L in range(P):
+                    Unroller.print(indents, f"""\
+                        vec_sum_{i} = __riscv_vfredusum_vs_f64_f64(vec_r_{i}_{L}, vec_zero_{i}, vlmax_{i});
+                        C_{i}[{I * m + J}] { '=' if reset else '+=' } __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
+                        """)
+
+    @classmethod
+    def matmul_tile_old(cls, indents, i, n, m, o, N, M, O, reset=False):
+        Unroller.print(indents, f"""\
                         // n {n} m {m} o {o} N {N} M {M} O {O} \
                         """)
         for I in range(N):
@@ -364,6 +404,10 @@ class Unroller:
                                     }}
                                 }}""")
                 
+            for L in range(Unroller.batch):
+                Unroller.print(indents, f"""\
+                vfloat64_t vec_r_{i}_{L};\
+                """)
             Unroller.print(indents, f"""\
                 vfloat64_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
                 double *ptr_{i}; double *ptr_{i+1}; double *ptr_{i+2} = {c};
@@ -645,6 +689,7 @@ if __name__ == "__main__":
                 print(f"{indents}// line {line_no}: {dedent(line)}", end="")
                 getattr(Unroller, method)(indents, *arguments)
             except Exception as e: 
+                if DEBUG: print(f"// ERROR: {e}", end="")
                 print(f"{indents}{method}_rvv({match_void.group(3)});")
         elif match_return:
             indents = match_return.group(1)

@@ -16,6 +16,7 @@ class Unroller:
     lmul = 1
     sew = 32
     vlen = 512
+    batch = 4
     vlmax = int(lmul * vlen / sew)
     idx = 1
 
@@ -286,9 +287,47 @@ class Unroller:
             l += vl
         Unroller.idx += 3
 
-
     @classmethod
     def matmul_tile(cls, indents, i, n, m, o, N, M, O, reset=False):
+        Unroller.print(indents, f"""\
+                        // n {n} m {m} o {o} N {N} M {M} O {O}
+                        """)
+        for I in range(N):
+            for J in range(0, M, Unroller.batch):
+                P = Unroller.batch if J + Unroller.batch < M else M - J;
+                Unroller.print(indents, f"""\
+                        ptr_{i} = A_{i} + {I * o};
+                        ptr_{i+1} = B_{i} + {J * o};\
+                        """)
+                k = O
+                for L in range(P):
+                    Unroller.print(indents, f"""\
+                        vec_r_{i}_{L} = __riscv_vfmv_v_f_i32(0, vlmax_{i});
+                        """)
+                while k > 0:
+                    vl = min(k, Unroller.vlmax)
+                    Unroller.print(indents, f"""\
+                        vec_{i} = __riscv_vle32_v_i32(ptr_{i}, {vl});\
+                        """)
+                    for L in range(P):
+                        Unroller.print(indents, f"""\
+                        vec_{i+1} = __riscv_vle32_v_i32(ptr_{i+1} + {L * o}, {vl});
+                        vec_r_{i}_{L} = __riscv_vfmacc_vv_i32(vec_r_{i}_{L}, vec_{i}, vec_{i+1}, {vl});\
+                        """)
+                    if k - vl > 0:
+                        Unroller.print(indents, f"""\
+                        ptr_{i} += {vl};
+                        ptr_{i+1} += {vl};\
+                        """)
+                    k -= vl
+                for L in range(P):
+                    Unroller.print(indents, f"""\
+                        vec_sum_{i} = __riscv_vfredsum_vs_i32_i32(vec_r_{i}_{L}, vec_zero_{i}, vlmax_{i});
+                        C_{i}[{I * m + J}] { '=' if reset else '+=' } __riscv_vmv_x_s_i32m1_i32(vec_sum_{i});\
+                        """)
+
+    @classmethod
+    def matmul_tile_old(cls, indents, i, n, m, o, N, M, O, reset=False):
         Unroller.print(indents, f"""\
                         // n {n} m {m} o {o} N {N} M {M} O {O} \
                         """)
@@ -368,7 +407,11 @@ class Unroller:
                                         }}
                                     }}
                                 }}""")
-                
+
+            for L in range(Unroller.batch):
+                Unroller.print(indents, f"""\
+                vint32_t vec_r_{i}_{L};\
+                """)
             Unroller.print(indents, f"""\
                 vint32_t vec_s_{i}, vec_{i}, vec_{i+1}, vec_{i+2};
                 int *ptr_{i}; int *ptr_{i+1}; int *ptr_{i+2} = {c};
