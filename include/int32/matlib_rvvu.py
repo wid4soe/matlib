@@ -323,7 +323,7 @@ class Unroller:
                 for L in range(P):
                     Unroller.print(indents, f"""\
                         vec_sum_{i} = __riscv_vfredsum_vs_i32_i32(vec_r_{i}_{L}, vec_zero_{i}, vlmax_{i});
-                        C_{i}[{I * m + J}] { '=' if reset else '+=' } __riscv_vmv_x_s_i32m1_i32(vec_sum_{i});\
+                        C_{i}[{I * m + J + L}] { '=' if reset else '+=' } __riscv_vmv_x_s_i32m1_i32(vec_sum_{i});\
                         """)
 
     @classmethod
