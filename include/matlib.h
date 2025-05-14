@@ -237,7 +237,8 @@ inline void printx(float *a, int n, int m, const char *name) {
     }
 }
 
-#elifdef USE_RVA
+#endif
+#ifdef USE_RVA
 
 inline void gen_rand_2d(float **ar, int n, int m) {
     for (int i = 0; i < n; ++i)
