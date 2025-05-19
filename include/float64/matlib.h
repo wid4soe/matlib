@@ -12,22 +12,6 @@
 #define MSTATUS_FS          0x00006000
 #define MSTATUS_XS          0x00018000
 
-#include "matlib_lmul.h"
-#ifdef USE_CPU
-#include "matlib_cpu.h"
-#endif
-#ifdef USE_RVA
-#include "matlib_rva.h"
-#endif
-#ifdef USE_RVV
-#include "matlib_rvv.h"
-#endif
-#ifdef USE_RVVU
-#include "matlib_rvvu.h"
-#endif
-
-typedef double tinytype;
-
 extern "C" {
 
 inline void gen_rand_1d(double *a, int n);
@@ -63,6 +47,8 @@ inline void free_array_2d(double *ar);
 inline void init_array_one_2d(double *ar, int n, int m);
 inline void printx(double *a, int n, int m, const char *name);
 #endif
+
+typedef double tinytype;
 
 #ifdef TRACE_CHECKSUMS
 #define TRACE_CHECKSUM(func, matrix) \
@@ -325,6 +311,20 @@ inline void printx(double **a, int n, int m, const char *name) {
         }
     }
 }
+#endif
+
+#include "matlib_lmul.h"
+#ifdef USE_CPU
+#include "matlib_cpu.h"
+#endif
+#ifdef USE_RVA
+#include "matlib_rva.h"
+#endif
+#ifdef USE_RVV
+#include "matlib_rvv.h"
+#endif
+#ifdef USE_RVVU
+#include "matlib_rvvu.h"
 #endif
 
 };

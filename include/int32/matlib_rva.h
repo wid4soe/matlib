@@ -17,6 +17,7 @@ void cwisemin_rva(int **a, int **b, int **c, int n, int m);
 void cwisemax_rva(int **a, int **b, int **c, int n, int m);
 void cwisemul_rva(int **a, int **b, int **c, int n, int m);
 void matmul_rva(int **a, int **b, int **c, int n, int m, int o);
+void matconv_rva(int **a, int **b, int **c, int n, int m, int o);
 void matvec_rva(int **a, int **b, int **c, int n, int m);
 void matvec_transpose_rva(int **a, int **b, int **c, int n, int m);
 void matmulf_rva(int **a, int **b, int f, int n, int m);
@@ -37,6 +38,7 @@ void matsetv_rva(int **a, int *f, int n, int m);
 #define cwisemax cwisemax_rva
 #define cwisemul cwisemul_rva
 #define matmul matmul_rva
+#define matconv matmul_rva
 #define matvec matvec_rva
 #define matvec_transpose matvec_transpose_rva
 #define matmulf matmulf_rva
@@ -87,6 +89,12 @@ inline void cwisemax_rva(int **a, int **b, int **c, int n, int m) {
 // A[n][o], B[m][o] --> C[n][m];
 inline void matmul_rva(int **a, int **b, int **c, int n, int m, int o) {
     matmul_rvv(a[0], b[0], c[0], n, m, o);
+}
+
+// matrix convolution, note B is not [o][o]
+// A[n][m], B[o][o] --> C[n][m];
+inline void matconv_rva(int **a, int **b, int **c, int n, int m, int o) {
+    matconv_rvv(a[0], b[0], c[0], n, m, o);
 }
 
 /*  a is row major

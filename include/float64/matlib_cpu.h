@@ -17,6 +17,7 @@ void cwisemin_cpu(double *a, double *b, double *c, int n, int mr);
 void cwisemax_cpu(double *a, double *b, double *c, int n, int m);
 void cwisemul_cpu(double *a, double *b, double *c, int n, int m);
 void matmul_cpu(double *a, double *b, double *c, int n, int m, int o);
+void matconv_cpu(double *a, double *b, double *c, int n, int m, int o);
 void matvec_cpu(double *a, double *b, double *c, int n, int m);
 void matvec_transpose_cpu(double *a, double *b, double *c, int n, int m);
 void matmulf_cpu(double *a, double *b, double f, int n, int m);
@@ -37,6 +38,7 @@ void matsetv_cpu(double *a, double *f, int n, int m);
 #define cwisemax cwisemax_cpu
 #define cwisemul cwisemul_cpu
 #define matmul matmul_cpu
+#define matconv matconv_cpu
 #define matvec matvec_cpu
 #define matvec_transpose matvec_transpose_cpu
 #define matmulf matmulf_cpu
@@ -125,6 +127,19 @@ inline void matmul_cpu(double *a, double *b, double *c, int n, int m, int o) {
             c[i * m + j] = 0;
             for (int k = 0; k < o; ++k)
                 c[i * m + j] += a[i * o + k] * b[j * o + k];
+        }
+}
+
+// matrix convolution, note B is not [o][o]
+// A[n][m], B[o][o] --> C[n][m];
+inline void matconv_cpu(double *a, double *b, double *c, int n, int m, int o) {
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < m; ++j) {
+            c[i * m + j] = 0;
+            for (int kl = i - o/2, kr = i + (o+1)/2, k = kl, kx = 0; k < kr; ++k, ++kx)
+                for (int ll = j - o/2, lr = j + (o+1)/2, l = ll, lx = 0; l < lr; ++l, ++lx)
+                    if (k < 0 || k >= n || l < 0 || l >= m) continue;
+                    else c[i * m + j] += a[k * m + l] * b[lx * o + kx];
         }
 }
 

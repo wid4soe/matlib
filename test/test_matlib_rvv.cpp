@@ -44,14 +44,38 @@ int main() {
     int *ID = (int *)malloc(sizeof(int) * N);
     for (int i = 0; i < N; i++) ID[i] = i * O;
     start = read_cycles();
+#if BATCH == 1
+    matmul(A, B, actual, N, M, O, 8);
+#else
     matmul(A, B, actual, N, M, O, 8, ID);
+#endif
     total = read_cycles() - start;
     printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
 
-    // print_array_2d(A, N, O, "float32", "A");
-    // print_array_2d(B, M, O, "float32", "B");
+    matset(actual, 0.0, N, M);
+    printf("matconv:        ");
+    A = alloc_array_2d(N, M);
+    B = alloc_array_2d(3, 3);
+    // Alternating 1 and -1 matrix
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < M; ++j) {
+            A[i * M + j] = ((i + j) % 2) ? 1.0f : -1.0f;
+        }
+    }   
+    // Magic square values in column-major order: 8,3,4,1,5,9,6,7,2
+    B[0] = 8.0f; B[1] = 3.0f; B[2] = 4.0f;
+    B[3] = 1.0f; B[4] = 5.0f; B[5] = 9.0f;
+    B[6] = 6.0f; B[7] = 7.0f; B[8] = 2.0f;
+    matconv_cpu(A, B, golden, N, M, 3);
+    start = read_cycles();
+    matconv(A, B, actual, N, M, 3);
+    total = read_cycles() - start;
+    printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
+
+    // print_array_2d(A, N, M, "float32", "A");
+    // print_array_2d(B, 3, 3, "float32", "B");
     // print_array_2d(golden, N, M, "float32", "golden");
-    // print_array_2d(actual, N, M, "float32", "actual");
+    print_array_2d(actual, N, M, "float32", "actual");
 
     // array gen
     scalar_t *G = alloc_array_2d(N, M);

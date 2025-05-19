@@ -11,6 +11,10 @@
 extern "C"
 {
 
+#ifndef BATCH
+#define BATCH 4
+#endif
+
 // RVV-specific function declarations
 float maxcoeff_rvv(float *a, int n, int m);
 float mincoeff_rvv(float *a, int n, int m);
@@ -22,6 +26,7 @@ void cwisemax_rvv(float *a, float *b, float *c, int n, int m);
 void cwisemul_rvv(float *a, float *b, float *c, int n, int m);
 void matmul_rvv(float *a, float *b, float *c, int n, int m, int o, int tile_size, int *ind_a);
 void matmul_rvvt(float *a, float *b, float *c, int i, int j, int k, int n, int m, int o, int tile_size, int *ind_a);
+void matconv_rvv(float *a, float *b, float *c, int n, int m, int o, int tile_size, int *ind_a);
 void matvec_rvv(float *a, float *b, float *c, int n, int m);
 void matvec_transpose_rvv(float *a, float *b, float *c, int n, int m);
 void matmulf_rvv(float *a, float *b, float f, int n, int m);
@@ -41,6 +46,7 @@ void matsetv_rvv(float *a, float *f, int n, int m);
 #define cwisemax cwisemax_rvv
 #define cwisemul cwisemul_rvv
 #define matmul matmul_rvv
+#define matconv matconv_rvv
 #define matvec matvec_rvv
 #define matvec_transpose matvec_transpose_rvv
 #define matmulf matmulf_rvv
@@ -50,9 +56,6 @@ void matsetv_rvv(float *a, float *f, int n, int m);
 #define matcopy matcopy_rvv
 #define matset matset_rvv
 #define matsetv matsetv_rvv
-
-#define BATCH 4
-
 
 // matrix maximum coefficient
 inline float maxcoeff_rvv(float *ptr_a, int n, int m) {
@@ -192,10 +195,10 @@ inline void matmul_rvv(float *a, float *b, float *c, int n, int m, int o, int ti
     }
 }
 
+#if BATCH == 1
+
 inline void matmul_rvvt(float *a, float *b, float *c, int i, int j, int k, int n, int m, int o, int tile_size, int *ind_a) {
-    vfloat32m1_t v1, v2, v3, v4, v5, v6, v7, v8;
-    vfloat32m1_t *vec_r[8] = { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 };
-    float *A = a + (ind_a ? ind_a[i] : i * o) + k;
+    float *A = a + i * o + k;
     float *B = b + j * o + k;
     float *C = c + i * m + j;
     int N = i + tile_size <= n ? tile_size : n % tile_size;
@@ -205,9 +208,43 @@ inline void matmul_rvvt(float *a, float *b, float *c, int i, int j, int k, int n
     size_t vlmax = __riscv_vsetvlmax_e32();
     vfloat32m1_t vec_zero = __riscv_vfmv_v_f_f32m1(0, vlmax);
     for (int I = 0; I < N; ++I) {
+        for (int J = 0; J < M; ++J) {
+            float *ptr_a = A + I * o; // row major
+            float *ptr_b = B + J * o; // column major
+            int K = O;
+            vfloat32_t vec_s = __riscv_vfmv_v_f_f32(0, vlmax);
+            for (size_t vl; K > 0; K -= vl, ptr_a += vl, ptr_b += vl) {
+                vl = __riscv_vsetvl_e32(K);
+                // printf("I: %d J: %d K: %d N: %d M: %d O: %d ptr_a: %x ptr_b: %x vl: %d\n", I, J, K, N, M, O, ptr_a, ptr_b, vl);
+                vfloat32_t vec_a = __riscv_vle32_v_f32(ptr_a, vl);
+                vfloat32_t vec_b = __riscv_vle32_v_f32(ptr_b, vl);
+                vec_s = __riscv_vfmacc_vv_f32(vec_s, vec_a, vec_b, vl);
+            }
+            vfloat32m1_t vec_sum = __riscv_vfredusum_vs_f32_f32(vec_s, vec_zero, vlmax);
+            float sum = __riscv_vfmv_f_s_f32m1_f32(vec_sum);
+            C[I * m + J] = k == 0 ? sum : C[I * m + J] + sum;
+        }
+    }
+}
+
+#else
+
+inline void matmul_rvvt(float *a, float *b, float *c, int i, int j, int k, int n, int m, int o, int tile_size, int *ind_a) {
+    vfloat32m1_t v1, v2, v3, v4, v5, v6, v7, v8;
+    vfloat32m1_t *vec_r[8] = { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 };
+    float *A = a + (ind_a ? 0 : i * o) + k;
+    float *B = b + j * o + k;
+    float *C = c + i * m + j;
+    int N = i + tile_size <= n ? tile_size : n % tile_size;
+    int M = j + tile_size <= m ? tile_size : m % tile_size;
+    int O = k + tile_size <= o ? tile_size : o % tile_size;
+    // printf("A: %d B: %d C: %d N: %d M: %d O: %d\n", A, B, C, N, M, O);
+    size_t vlmax = __riscv_vsetvlmax_e32();
+    vfloat32m1_t vec_zero = __riscv_vfmv_v_f_f32m1(0, vlmax);
+    for (int I = 0; I < N; ++I) {
+        float *ptr_a = A + (ind_a ? ind_a[I + i] : I * o); // row major
         for (int J = 0; J < M; J += BATCH) {
             int P = J + BATCH < M ? BATCH : M - J;
-            float *ptr_a = A + I * o; // row major
             float *ptr_b = B + J * o; // column major
             int K = O;
             for (int L = 0; L < P; L++) {
@@ -229,6 +266,34 @@ inline void matmul_rvvt(float *a, float *b, float *c, int i, int j, int k, int n
             }
         }
     }
+}
+
+#endif
+
+inline void matconv_rvv(float *a, float *b, float *c, int n, int m, int o, int tile_size = -1, int *ind_a = 0) {
+    // create a matrix which is the padded version of a
+    const int pad = 2 * (int)(o/2);
+    float *pa = alloc_array_2d(n + pad, m + pad);
+    for (int i = 0; i < n; i++) {
+        matsetv_rvv(pa + (pad / 2 + i) * (m + pad) + (pad / 2), a + i * m, 1, m);    
+    }
+    // the redirection buffer has o blocks of nxm each
+    int *pd = (int *)malloc(sizeof(int) * n * m);
+    // this is the result for each filter slice
+    float *pc = alloc_array_2d_col(n * m, 1);
+    // loop over the filter slices
+    for (int l = 0; l < o; l++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                pd[i * m + j] = (i + l) * (m + pad) + j;
+            }
+        }
+        matmul_rvv(pa, b, pc, n * m, o, o, o, pd);
+        matadd_rvv(c, pc, c, n, m);
+    }
+    free(pd);
+    free(pc);
+    free(pa);
 }
 
 /*  a is row major

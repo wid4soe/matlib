@@ -28,7 +28,11 @@ inline void test_matmul() {
     int *ID = (int *)malloc(sizeof(int) * N);
     for (int i = 0; i < N; i++) ID[i] = i * O;
     start = read_cycles();
+#if BATCH == 1
+    matmul(A, B, actual, N, M, O, 8);
+#else
     matmul(A, B, actual, N, M, O, 8, ID);
+#endif
     total = read_cycles() - start;
     printf("%lu\n", total);
 }
