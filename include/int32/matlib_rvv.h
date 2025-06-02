@@ -244,9 +244,10 @@ inline void matmul_rvvt(int *a, int *b, int *c, int i, int j, int k, int n, int 
     size_t vlmax = __riscv_vsetvlmax_e32();
     vint32m1_t vec_zero = __riscv_vmv_v_x_i32m1(0, vlmax);
     for (int I = 0; I < N; ++I) {
-        int *ptr_a = A + (ind_a ? ind_a[I + i] : I * o); // row major
-        for (int J = 0; J < M; J += BATCH) {
+        int *ptr_a_0 = A + (ind_a ? ind_a[I + i] : I * o); // row major
+        for (int J = 0; J <= M; J += BATCH) {
             int P = J + BATCH < M ? BATCH : M - J;
+            int *ptr_a = ptr_a_0;
             int *ptr_b = B + J * o; // column major
             int K = O;
             for (int L = 0; L < P; L++) {

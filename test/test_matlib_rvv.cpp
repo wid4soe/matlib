@@ -44,16 +44,16 @@ int main() {
     int *ID = (int *)malloc(sizeof(int) * N);
     for (int i = 0; i < N; i++) ID[i] = i * O;
     start = read_cycles();
-#if BATCH == 1
-    matmul(A, B, actual, N, M, O, 8);
-#else
-    matmul(A, B, actual, N, M, O, 8, ID);
-#endif
+    #if BATCH == 1
+        matmul(A, B, actual, N, M, O, 8);
+    #else
+        matmul(A, B, actual, N, M, O, 8, ID);
+    #endif
     total = read_cycles() - start;
     printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
 
     matset(actual, 0.0, N, M);
-    printf("matconv:        ");
+    printf("matconv0:       ");
     A = alloc_array_2d(N, M);
     B = alloc_array_2d(3, 3);
     // Alternating 1 and -1 matrix
@@ -71,11 +71,30 @@ int main() {
     matconv(A, B, actual, N, M, 3);
     total = read_cycles() - start;
     printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
+    // Sequential matrix from 1 to N * M
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < M; ++j) {
+            A[i * M + j] = i * M + j + 1;
+        }
+    }   
+    // A sampling convolution at a particular index (column-major)
+    for (int i = 0; i < 9; i++) {
+        for (int j = 0; j < 9; j++) {
+            B[j] = i == j ? 1.0f : 0.0f;
+        }        
+        matset(actual, 0.0, N, M);
+        printf("matconv%d:       ", i + 1);
+        matconv_cpu(A, B, golden, N, M, 3);
+        start = read_cycles();
+        matconv(A, B, actual, N, M, 3);
+        total = read_cycles() - start;
+        printf("%s (%lu)\n", compare_2d(golden, actual, N, M) ? "pass" : "fail", total);
+    } 
 
     // print_array_2d(A, N, M, "float32", "A");
     // print_array_2d(B, 3, 3, "float32", "B");
-    // print_array_2d(golden, N, M, "float32", "golden");
-    print_array_2d(actual, N, M, "float32", "actual");
+    // print_array_2d(golden, N, M, "float32", "golden", "%4.0f");
+    // print_array_2d(actual, N, M, "float32", "actual", "%4.0f");
 
     // array gen
     scalar_t *G = alloc_array_2d(N, M);

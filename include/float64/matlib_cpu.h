@@ -130,7 +130,7 @@ inline void matmul_cpu(double *a, double *b, double *c, int n, int m, int o) {
         }
 }
 
-// matrix convolution, note B is not [o][o]
+// matrix convolution, note B is not [o][o], B in column order
 // A[n][m], B[o][o] --> C[n][m];
 inline void matconv_cpu(double *a, double *b, double *c, int n, int m, int o) {
     for (int i = 0; i < n; ++i)
@@ -139,7 +139,7 @@ inline void matconv_cpu(double *a, double *b, double *c, int n, int m, int o) {
             for (int kl = i - o/2, kr = i + (o+1)/2, k = kl, kx = 0; k < kr; ++k, ++kx)
                 for (int ll = j - o/2, lr = j + (o+1)/2, l = ll, lx = 0; l < lr; ++l, ++lx)
                     if (k < 0 || k >= n || l < 0 || l >= m) continue;
-                    else c[i * m + j] += a[k * m + l] * b[lx * o + kx];
+                    else c[i * m + j] += a[k * m + l] * b[kx * o + lx];
         }
 }
 

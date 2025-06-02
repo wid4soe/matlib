@@ -25,6 +25,7 @@ extern "C"
 #undef cwisemax
 #undef cwisemul
 #undef matmul
+#undef matconv
 #undef matvec
 #undef matvec_transpose
 #undef matmulf
@@ -43,6 +44,7 @@ extern "C"
 #define cwisemax(...) __rvvu__cwisemax(__VA_ARGS__)
 #define cwisemul(...) __rvvu__cwisemul(__VA_ARGS__)
 #define matmul(...) __rvvu__matmul(__VA_ARGS__)
+#define matconv(...) __rvvu__matconv(__VA_ARGS__)
 #define matvec(...) __rvvu__matvec(__VA_ARGS__)
 #define matvec_transpose(...) __rvvu__matvec_transpose(__VA_ARGS__)
 #define matmulf(...) __rvvu__matmulf(__VA_ARGS__)

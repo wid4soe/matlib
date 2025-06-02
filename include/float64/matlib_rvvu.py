@@ -300,18 +300,21 @@ class Unroller:
                                 // n {n} m {m} o {o} N {N} M {M} O {O}\
                                 """)
                 for I in range(N):
-                    ptr_a = f"{a} + {ind_a}[i + {I}] + k" if ind_a else f"{a} + (i + {I}) * {o} + k"
                     for J in range(0, M, Unroller.batch):
                         P = Unroller.batch if J + Unroller.batch < M else M - J;
+                        ptr_a = f"{a} + {ind_a}[i + {I}] + k" if ind_a else f"{a} + (i + {I}) * {o} + k"
                         Unroller.print(indents28, f"""\
+                                // printf("n {n} m {m} o {o} N {N} M {M} O {O} P {P}\\n"); 
                                 ptr_{i} = {ptr_a};
-                                ptr_{i+1} = B_{i} + {J * o};\
+                                ptr_{i+1} = B_{i} + {J * o};
+                                vlmax_{i} = vlmax_{i} > {O} ? {O} : vlmax_{i};\
                                 """)
                         k = O
                         for L in range(P):
                             Unroller.print(indents28, f"""\
                                 vec_r_{i}_{L} = __riscv_vfmv_v_f_f64(0, vlmax_{i});
                                 """)
+                        Unroller.print(indents28, f"// k = {k}")
                         while k > 0:
                             vl = min(k, Unroller.vlmax)
                             Unroller.print(indents28, f"""\
@@ -331,6 +334,8 @@ class Unroller:
                         for L in range(P):
                             Unroller.print(indents28, f"""\
                                 vec_sum_{i} = __riscv_vfredusum_vs_f64_f64(vec_r_{i}_{L}, vec_zero_{i}, vlmax_{i});
+                                // C_{i}[{I * m + J + L}] = (i * {m} + j) * 10000 + {(I * m + J + L) * 1000 + N * 100 + M * 10 + O};
+                                // C_{i}[{I * m + J + L}] = __riscv_vfmv_f_s_f64m1_f64(vec_r_{i}_{L});
                                 C_{i}[{I * m + J + L}] { '=' if reset else '+=' } __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
                                 """)
 
@@ -394,9 +399,9 @@ class Unroller:
                         for (int k = 0; k < {o}; k += {t}) {{
                             double *B_{i} = {b} + j * {o} + k;
                             double *C_{i} = {c} + i * {m} + j;
-                            bool a_full_{i} = (i + {t}) < {n};
-                            bool b_full_{i} = (j + {t}) < {m};
-                            bool c_full_{i} = (k + {t}) < {o};
+                            bool a_full_{i} = (i + {t}) <= {n};
+                            bool b_full_{i} = (j + {t}) <= {m};
+                            bool c_full_{i} = (k + {t}) <= {o};
                             int N_{i} = a_full_{i} ? {t} : nt_{i};
                             int M_{i} = b_full_{i} ? {t} : mt_{i};
                             int O_{i} = c_full_{i} ? {t} : ot_{i};
@@ -445,6 +450,42 @@ class Unroller:
                             ptr_{i+2}[{I * m + J}] = __riscv_vfmv_f_s_f64m1_f64(vec_sum_{i});\
                             """)
             Unroller.idx += 3
+
+    @classmethod
+    def matconv(cls, indents, a, b, c, n, m, o, tile_size="-1", ind_a=""):
+        n = eval(n)
+        m = eval(m)
+        o = eval(o)
+        t = eval(tile_size)
+        i = Unroller.idx
+        pad = 2 * int(o / 2)
+        Unroller.print(indents, f"""\
+                            double *pa_{i} = alloc_array_2d({n + pad}, {m + pad});
+                            int *pd_{i} = (int *)malloc(sizeof(int) * {n * m});
+                            double *pc_{i} = alloc_array_2d_col({n * m}, 1);
+                            // print_array_2d({a}, {n},{ m}, \"float64\", \"{a}\", \"%4.0f\");
+                            // print_array_2d({b}, {o}, {o}, \"float64\", \"{b}\", \"%4.0f\"); \
+                            """) 
+        Unroller.idx += 1
+        for I in range(n):
+            Unroller.matsetv(indents, f"pa_{i} + {int((pad / 2 + I) * (m + pad) + (pad / 2))}", f"{a} + {I * m}", "1", f"{m}")
+        Unroller.print(indents, f"""\
+                            // print_array_2d(pa_{i}, {n + pad}, {m + pad}, \"float64\", \"pa_{i}\", \"%4.0f\"); \
+                            """) 
+        for L in range(o):
+            for I in range(n):
+                for J in range(m):
+                    Unroller.print(indents, f"""\
+                            pd_{i}[{I * m + J}] = {(I + L) * (m + pad) + J};""")
+            # Unroller.print(indents, f"print_int_array_2d(pd_{i}, {n}, {m}, \"int\", \"pd\");")
+            Unroller.matmul(indents, f"(pa_{i})", f"({b} + {L * o})", f"(pc_{i})", f"{n * m}", "1", f"{o}", f"{o}", f"pd_{i}");
+            # Unroller.print(indents, f"print_array_2d(pc_{i}, {n}, {m}, \"float\", \"pc_{i}_{L}\");")
+            Unroller.matadd(indents, c, f"pc_{i}", c, f"{n}", f"{m}");
+        Unroller.print(indents, f"""\
+                            free(pd_{i});
+                            free(pc_{i});
+                            free(pa_{i});\
+                            """);
 
     @classmethod
     def matvec(cls, indents, a, b, c, n, m):
@@ -651,9 +692,11 @@ if __name__ == "__main__":
             method = match_void.group(2)
             arguments = re.split(r', *', match_void.group(3).strip())
             if DEBUG:
-                print("indents: ", len(indents))
-                print("function: ", method)
-                print("arguments: ", arguments)
+                Unroller.print(indents, f"""\
+                    // indents: {len(indents)}
+                    // function: {method}
+                    // arguments: {arguments}\
+                """)
             try:
                 print(f"{indents}// line {line_no}: {dedent(line)}", end="")
                 getattr(Unroller, method)(indents, *arguments)

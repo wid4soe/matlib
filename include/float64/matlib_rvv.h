@@ -187,7 +187,6 @@ inline void matmul_rvv(double *a, double *b, double *c, int n, int m, int o, int
         for (int i = 0; i < n; i += tile_size) {
             for (int j = 0; j < m; j += tile_size) {
                 for (int k = 0; k < o; k += tile_size) {
-                    // printf("i: %d j: %d k: %d n: %d m: %d o: %d\n", i, j, k, n, m, o);
                     matmul_rvvt(a, b, c, i, j, k, n, m, o, tile_size, ind_a);
                 }
             }
@@ -204,7 +203,7 @@ inline void matmul_rvvt(double *a, double *b, double *c, int i, int j, int k, in
     int N = i + tile_size <= n ? tile_size : n % tile_size;
     int M = j + tile_size <= m ? tile_size : m % tile_size;
     int O = k + tile_size <= o ? tile_size : o % tile_size;
-    // printf("A: %d B: %d C: %d N: %d M: %d O: %d\n", A, B, C, N, M, O);
+    // printf("i: %d j: %d k: %d A: %d B: %d C: %d N: %d M: %d O: %d\n", i, j, k, i * o + k, j * o + k, i * m + j, N, M, O);
     size_t vlmax = __riscv_vsetvlmax_e64();
     vfloat64m1_t vec_zero = __riscv_vfmv_v_f_f64m1(0, vlmax);
     for (int I = 0; I < N; ++I) {
@@ -223,7 +222,6 @@ inline void matmul_rvvt(double *a, double *b, double *c, int i, int j, int k, in
             vfloat64m1_t vec_sum = __riscv_vfredusum_vs_f64_f64(vec_s, vec_zero, vlmax);
             double sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             C[I * m + J] = k == 0 ? sum : C[I * m + J] + sum;
-            // C[I * m + J] = C[I * m + J] + sum;
         }
     }
 }
@@ -239,13 +237,15 @@ inline void matmul_rvvt(double *a, double *b, double *c, int i, int j, int k, in
     int N = i + tile_size <= n ? tile_size : n % tile_size;
     int M = j + tile_size <= m ? tile_size : m % tile_size;
     int O = k + tile_size <= o ? tile_size : o % tile_size;
-    // printf("A: %d B: %d C: %d N: %d M: %d O: %d\n", A, B, C, N, M, O);
+    // printf("i: %d j: %d k: %d A: %d B: %d C: %d N: %d M: %d O: %d\n", i, j, k, (ind_a ? 0 : i * o) + k, j * o + k, i * m + j, N, M, O);
     size_t vlmax = __riscv_vsetvlmax_e64();
     vfloat64m1_t vec_zero = __riscv_vfmv_v_f_f64m1(0, vlmax);
     for (int I = 0; I < N; ++I) {
-        double *ptr_a = A + (ind_a ? ind_a[I + i] : I * o); // row major
-        for (int J = 0; J < M; J += BATCH) {
+        double *ptr_a_0 = A + (ind_a ? ind_a[I + i] : I * o); // row major
+        // printf("  I: %d i: %d ind_a: %d\n", I, i, ind_a ? ind_a[I + i] : (I + i) * o);
+        for (int J = 0; J <= M; J += BATCH) {
             int P = J + BATCH < M ? BATCH : M - J;
+            double *ptr_a = ptr_a_0;
             double *ptr_b = B + J * o; // column major
             int K = O;
             for (int L = 0; L < P; L++) {
@@ -264,7 +264,9 @@ inline void matmul_rvvt(double *a, double *b, double *c, int i, int j, int k, in
                 vfloat64m1_t vec_sum = __riscv_vfredusum_vs_f64_f64(*(vec_r[L]), vec_zero, vlmax);
                 double sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
                 C[I * m + J + L] = k == 0 ? sum : C[I * m + J + L] + sum;
+                // printf("%4.0f ", sum);
             }
+            // printf("\n");
         }
     }
 }
@@ -278,6 +280,9 @@ inline void matconv_rvv(double *a, double *b, double *c, int n, int m, int o, in
     for (int i = 0; i < n; i++) {
         matsetv_rvv(pa + (pad / 2 + i) * (m + pad) + (pad / 2), a + i * m, 1, m);    
     }
+    // print_array_2d(a, n, m, "float64", "a", "%4.0f");
+    // print_array_2d(pa, n + pad, m + pad, "float64", "pa", "%4.0f");
+    // print_array_2d(b, o, o, "float64", "pb", "%4.0f");
     // the redirection buffer has o blocks of nxm each
     int *pd = (int *)malloc(sizeof(int) * n * m);
     // this is the result for each filter slice
@@ -289,7 +294,9 @@ inline void matconv_rvv(double *a, double *b, double *c, int n, int m, int o, in
                 pd[i * m + j] = (i + l) * (m + pad) + j;
             }
         }
-        matmul_rvv(pa, b, pc, n * m, o, o, o, pd);
+        // print_int_array_2d(pd, n, m, "int", "pd");
+        matmul_rvv(pa, b + l * o, pc, n * m, 1, o, o, pd);
+        // print_array_2d(pc, n, m, "float", "pc");
         matadd_rvv(c, pc, c, n, m);
     }
     free(pd);

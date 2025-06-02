@@ -28,24 +28,26 @@ inline void init_array_one_1d(float *ar, int n);
 
 #ifdef USE_RVA
 inline void gen_rand_2d(float **ar, int n, int m);
-inline void print_array_2d(float **a, int n, int m, const char *type, const char *name);
+inline void print_array_2d(float **a, int n, int m, const char *type, const char *name, const char *fmt);
+inline void print_int_array_2d(int **a, int n, int m, const char *type, const char *name);
 inline bool compare_2d(float **golden, float **actual, int n, int m);
 inline float **alloc_array_2d(int n, int m);
 inline float **alloc_array_2d_col(int n, int m);
 inline float checksum(float **ar, int n, int m);
 inline void free_array_2d(float **ar);
 inline void init_array_one_2d(float **ar, int n, int m);
-inline void printx(float **a, int n, int m, const char *name);
+inline void printx(float **a, int n, int m, const char *name, const char *fmt);
 #elif defined(USE_RVV) || defined(USE_RVVU)
 inline void gen_rand_2d(float *ar, int n, int m);
-inline void print_array_2d(float *a, int n, int m, const char *type, const char *name);
+inline void print_array_2d(float *a, int n, int m, const char *type, const char *name, const char *fmt);
+inline void print_int_array_2d(int *a, int n, int m, const char *type, const char *name);
 inline bool compare_2d(float *golden, float *actual, int n, int m);
 inline float *alloc_array_2d(int n, int m);
 inline float *alloc_array_2d_col(int n, int m);
 inline float checksum(float *ar, int n, int m);
 inline void free_array_2d(float *ar);
 inline void init_array_one_2d(float *ar, int n, int m);
-inline void printx(float *a, int n, int m, const char *name);
+inline void printx(float *a, int n, int m, const char *name, const char *fmt);
 #endif
 
 typedef float tinytype;
@@ -158,11 +160,25 @@ inline void gen_rand_2d(float *ar, int n, int m) {
         ar[i] = (float)rand() / (float)RAND_MAX + (float)(rand() % 1000);
 }
 
-inline void print_array_2d(float *a, int n, int m, const char *type, const char *name) {
+inline void print_array_2d(float *a, int n, int m, const char *type, const char *name, const char *fmt = "%8.4f") {
     printf("%s %s[%d][%d] = {\n", type, name, n, m);
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
-            printf("%8.4f", a[i * m + j]);
+            printf(fmt, a[i * m + j]);
+            if (j == m - 1)
+                printf(i == n - 1 ? "};\n" : ",\n");
+            else
+                printf(",");
+        }
+    }
+    puts("");
+}
+
+inline void print_int_array_2d(int *a, int n, int m, const char *type, const char *name) {
+    printf("%s %s[%d][%d] = {\n", type, name, n, m);
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < m; ++j) {
+            printf("%d", a[i * m + j]);
             if (j == m - 1)
                 printf(i == n - 1 ? "};\n" : ",\n");
             else
@@ -213,11 +229,11 @@ inline void init_array_one_2d(float *ar, int n, int m) {
         ar[i] = 1;
 }
 
-inline void printx(float *a, int n, int m, const char *name) {
+inline void printx(float *a, int n, int m, const char *name, const char *fmt = "%8.4f") {
     printf("%s ", name);
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
-            printf("%8.4f", a[i * m + j]);
+            printf(fmt, a[i * m + j]);
             if (j == m - 1)
                 puts(i == n - 1 ? "" : ",");
             else
@@ -234,11 +250,25 @@ inline void gen_rand_2d(float **ar, int n, int m) {
             ar[i][j] = (float)rand() / (float)RAND_MAX + (float)(rand() % 1000);
 }
 
-inline void print_array_2d(float **a, int n, int m, const char *type, const char *name) {
+inline void print_array_2d(float **a, int n, int m, const char *type, const char *name, const char *fmt = "%8.4f") {
     printf("%s %s[%d][%d] = {\n", type, name, n, m);
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
-            printf("%8.4f", a[i][j]);
+            printf(fmt, a[i][j]);
+            if (j == m - 1)
+                printf(i == n - 1 ? "};\n" : ",\n");
+            else
+                printf(",");
+        }
+    }
+    puts("");
+}
+
+inline void print_int_array_2d(int **a, int n, int m, const char *type, const char *name) {
+    printf("%s %s[%d][%d] = {\n", type, name, n, m);
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < m; ++j) {
+            printf("%d", a[i][j]);
             if (j == m - 1)
                 printf(i == n - 1 ? "};\n" : ",\n");
             else
