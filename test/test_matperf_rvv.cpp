@@ -20,7 +20,15 @@ inline void test_matmul() {
     printf("%lu\n", total);
     printf("matmult:        ");
     start = read_cycles();
-    matmul(A, B, actual, N, M, O, 8);
+    #ifdef USE_RVV
+        matmul(A, B, actual, N, M, O, 8);
+    #elif defined(USE_RVVU)
+        matmul(A, B, actual, N, M, O, 8);
+    #elif defined(USE_RVVA)
+        matmul(A, B, actual, N, M, O, 8);
+    #else
+        matmul(A, B, actual, N, M, O);
+    #endif
     total = read_cycles() - start;
     printf("%lu\n", total);
     matset(actual, 0.0, N, M);
@@ -29,7 +37,15 @@ inline void test_matmul() {
     for (int i = 0; i < N; i++) ID[i] = i * O;
     start = read_cycles();
 #if BATCH == 1
-    matmul(A, B, actual, N, M, O, 8);
+    #ifdef USE_RVV
+        matmul(A, B, actual, N, M, O, 8);
+    #elif defined(USE_RVVU)
+        matmul(A, B, actual, N, M, O, 8);
+    #elif defined(USE_RVVA)
+        matmul(A, B, actual, N, M, O, 8);
+    #else
+        matmul(A, B, actual, N, M, O);
+    #endif
 #else
     matmul(A, B, actual, N, M, O, 8, ID);
 #endif
