@@ -71,7 +71,7 @@ if(MEASURE_CYCLES)
 endif(MEASURE_CYCLES)
 
 # Add optimization flags
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
