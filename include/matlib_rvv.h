@@ -2,9 +2,11 @@
 #ifndef TINYMPC_MATLIB_RVV_H
 #define TINYMPC_MATLIB_RVV_H
 
-#include <cstdio>
-#include <climits>
-#include <cmath>
+// #include <cstdio>
+// #include <climits>
+// #include <cmath>
+
+#include <float.h>
 
 #include "riscv_vector.h"
 
@@ -53,7 +55,7 @@ void matsetv_rvv(float *a, float *f, int n, int m);
 
 // matrix maximum coefficient
 inline float maxcoeff_rvv(float *ptr_a, int n, int m) {
-    float max = std::numeric_limits<float>::min();
+    float max = FLT_MIN;
     vfloat32m1_t vec_max = __riscv_vfmv_s_f_f32m1(max, 1);
     int k = m * n, l = 0;
     for (size_t vl; k > 0; k -= vl, l += vl) {
@@ -67,7 +69,7 @@ inline float maxcoeff_rvv(float *ptr_a, int n, int m) {
 
 // matrix min coefficient
 inline float mincoeff_rvv(float *ptr_a, int n, int m) {
-    float min = std::numeric_limits<float>::max();
+    float min = FLT_MAX;
     vfloat32m1_t vec_min = __riscv_vfmv_s_f_f32m1(min, 1);
     int k = m * n, l = 0;
     for (size_t vl; k > 0; k -= vl, l += vl) {

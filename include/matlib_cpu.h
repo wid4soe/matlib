@@ -2,7 +2,8 @@
 #ifndef TINYMPC_MATLIB_CPU_H
 #define TINYMPC_MATLIB_CPU_H
 
-#include <cmath>
+// #include <cmath>
+#include <float.h>
 
 extern "C"
 {
@@ -52,7 +53,7 @@ void matsetv_cpu(float *a, float *f, int n, int m);
 
 // matrix maximum coefficient
 inline float maxcoeff_cpu(float *a, int n, int m) {
-    float max = std::numeric_limits<float>::min();
+    float max = FLT_MIN;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
             max = a[i * m + j] > max ? a[i * m + j] : max;
@@ -63,7 +64,7 @@ inline float maxcoeff_cpu(float *a, int n, int m) {
 
 // matrix min coefficient
 inline float mincoeff_cpu(float *a, int n, int m) {
-    float min = std::numeric_limits<float>::max();
+    float min = FLT_MAX;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < m; ++j) {
             min = a[i * m + j] < min ? a[i * m + j] : min;
