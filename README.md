@@ -13,5 +13,5 @@ make
 Finally, to test using spike, use the following command. If everything goes well, there should be a list of available functions followed by a pass and the number cycles. 
 
 ```
-spike --isa=rv64gcv_zv512b test_matlib_rvv
+spike --isa=rv64gcv_zicntr_zvl512b test_matlib_rvv
 ```
